@@ -1,0 +1,36 @@
+name: Game checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  simulation-and-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Simulation checks
+        run: node engine.test.js
+      - name: Install browser test tooling
+        run: npm install --no-save --package-lock=false --prefix /tmp/haven17-ui playwright@1.56.1
+      - name: Install Chromium
+        run: node /tmp/haven17-ui/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Browser checks
+        env:
+          HAVEN_PLAYWRIGHT_MODULE: /tmp/haven17-ui/node_modules/playwright/index.mjs
+        run: node scripts/verify-ui.mjs
+      - name: Keep browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-check-artifacts
+          path: ui-check-artifacts/
+          retention-days: 7

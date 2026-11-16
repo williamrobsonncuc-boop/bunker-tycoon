@@ -10,7 +10,9 @@ This is a mobile-friendly browser foundation, not yet a packaged Android/iOS app
 - Tap reachable rock, then **Excavate**. Rooms expand sideways.
 - Excavate below the central access shaft to unlock deeper floors.
 - Tap an empty excavated chamber and select a facility.
-- Swipe the bunker horizontally on narrow screens and vertically to explore floors.
+- Swipe the bunker horizontally and vertically to explore. Use **Centre shaft** to return to the ladder and **Overview** to zoom out.
+- Tap a room or earth tile to open its controls. Use the bottom **Build**, **People**, **Entrance** and **Supplies** buttons; **Close** or Escape dismisses the control panel.
+- The approved simple Haven 17 direction is implemented as small reusable SVG room scenes, civilian portraits, cream labels and bold outlines. The map retains all seven columns and eight floors, including existing saves.
 - Use **Recover entrance supplies** for repeatable materials while prototyping.
 - Build living quarters before admitting a whole arrival group.
 - Entrance choices: permanent admission, 180-active-second temporary shelter, supply aid, or decline. Unresolved arrivals wait indefinitely; new groups appear 120 active seconds after a decision.
@@ -38,16 +40,17 @@ This is a mobile-friendly browser foundation, not yet a packaged Android/iOS app
 ## Architecture
 - `engine.js`: DOM-independent simulation, commands and save validation; reusable in a future client.
 - `app.js`: browser rendering, interactions and persistence.
-- `style.css`: responsive underground cutaway interface.
+- `style.css`: responsive cartoon cutaway, mobile control sheet and navigation.
+- `assets/`: nine room scenes, six civilian character variants and the surface entrance; all local SVG assets.
 - `engine.test.js`: dependency-free simulation regression tests.
 
 Run tests with `node engine.test.js`.
 
 ## Validation
-Sixteen simulation tests passed in a JavaScript runtime during implementation. Application JavaScript syntax was checked. Browser/device rendering and interaction testing has not yet been performed because no browser execution environment was available.
+Sixteen simulation tests passed in a JavaScript runtime during implementation. Application JavaScript syntax was checked. The visual update also passed twelve UI wiring checks using a lightweight DOM shim (map rendering, navigation, excavation, construction, admission, roster refresh, pause/resume, panel closing and saving). These are not browser/layout tests. Browser/device rendering and interaction testing has not yet been performed because no browser execution environment was available.
 
 ## Intentional prototype limits
-Placeholder visuals; no animated residents, fatigue/rest cycles, training, sanitation/disease simulation, fuel, maintenance, expeditions, research, cloud saves, monetisation or native packaging yet. The World War 3 setting is narrative context; combat and world events are not simulated. Temporary shelter is an explicit timed onward-evacuation mechanic, not a moral consequence simulator. Production priority is generators, water, farming, workshops, then clinics, using insertion order within each type. Worker assignments are explicit; medical patients are selected automatically in resident order. Unstaffed facilities do not produce. Supply recovery is unlimited to prevent prototype dead ends. Balance is provisional.
+The simple concept-art direction is translated into vector game assets; animation and final visual QA are pending. No animated residents, fatigue/rest cycles, training, sanitation/disease simulation, fuel, maintenance, expeditions, research, cloud saves, monetisation or native packaging yet. The World War 3 setting is narrative context; combat and world events are not simulated. Temporary shelter is an explicit timed onward-evacuation mechanic, not a moral consequence simulator. Production priority is generators, water, farming, workshops, then clinics, using insertion order within each type. Worker assignments are explicit; medical patients are selected automatically in resident order. Unstaffed facilities do not produce. Supply recovery is unlimited to prevent prototype dead ends. Balance is provisional.
 
 ## Next milestones
 1. Browser and physical-phone QA.

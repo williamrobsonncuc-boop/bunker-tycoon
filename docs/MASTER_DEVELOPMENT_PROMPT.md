@@ -1,8 +1,12 @@
 # BUNKER TYCOON — MASTER DEVELOPMENT PROMPT AND GAME BIBLE
 
-Version 1.0 · 16 November 2026 · Planning document
+Version 1.1 · 16 November 2026 · Planning document
 Working creative title: **Underhaven: Bunker Tycoon**. This title is a proposal, has not been checked for existing use, and does not rename the repository.
 Canonical repository: https://github.com/williamrobsonncuc-boop/bunker-tycoon
+
+**Approved visual direction**
+
+The owner selected the simple, phone-readable Haven 17 concept: flat 2D room illustrations, bold rounded charcoal outlines, cream labels, warm earth, distinct pastel room colours and friendly civilian sprites. This takes precedence over any earlier detailed or painterly concept exploration. The first vector implementation is documented in [the asset notes](../assets/README.md); visual and physical-device QA are still pending.
 
 **How to use this document**
 
@@ -593,7 +597,7 @@ The slice passes when independent players can explain why resources changed, wha
 
 ## 21. Art direction and visual identity
 
-Creative direction: **civilian engineering becoming a home**.
+Creative direction: **civilian engineering becoming a home**, expressed in simple flat 2D shapes. Prefer clear silhouettes, restrained props and bold outlines over dense texture. Keep room labels and controls live and separate from illustration.
 
 Use graphite earth, worn concrete, painted steel, warm practical lighting and living green plants. Avoid copying another franchise's retro-futuristic suits, mascot, room silhouettes, signage or icon language.
 
