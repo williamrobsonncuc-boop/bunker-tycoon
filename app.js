@@ -1,12 +1,56 @@
 "use strict";
-const E=window.Bunker, $=id=>document.getElementById(id), SAVE="bunker-tycoon:v1";
+const E=window.Bunker, $=id=>document.getElementById(id), SAVE="bunker-tycoon:v2";
 let state=E.initial(), selected=null, paused=false, report={net:{},status:{}}, saveWarning="";
-try {const raw=localStorage.getItem(SAVE);if(raw)state=E.restore(raw);}catch(e){saveWarning="Save could not be loaded. A fresh shelter is shown; export it before closing if storage is unavailable.";}
+try {const raw=localStorage.getItem(SAVE)||localStorage.getItem("bunker-tycoon:v1");if(raw)state=E.restore(raw);}catch(e){saveWarning="Save could not be loaded. A fresh shelter is shown; export it before closing if storage is unavailable.";}
+
+function node(tag,text){const el=document.createElement(tag);el.textContent=text;return el;}
+let peopleSignature="";
+function renderCommunity(){
+ const box=$("arrival");box.replaceChildren();
+ const f=E.forecast(state);
+ if(f){
+ box.append(node("strong",state.arrival.name),node("p",state.arrival.story));
+ state.arrival.people.forEach(p=>box.append(node("p",p.name+" · "+(p.child?"Child":p.skill)+" · "+(p.health<100?"Needs treatment ("+p.health+"%)":"Healthy"))));
+ box.append(node("p","After admission: "+f.beds+"/"+f.capacity+" beds; "+f.patients+" patients / "+f.medical+" staffed treatment places."));
+ box.append(node("p","Arrival supplies: "+f.foodCost+" food + "+f.waterCost+" water. Additional consumption: "+f.extraDemand.toFixed(2)+" food and water each second."));
+ box.append(node("p","Estimated stocks after 60 active seconds: "+Math.floor(f.foodAfter)+" food / "+Math.floor(f.waterAfter)+" water. Assumes admission now, current staffing, no new assignments or construction."));
+ box.append(node("p","Temporary guests use the same beds and supplies, may work if healthy, and leave together after 180 active seconds. Unresolved arrivals wait without a deadline."));
+ }else box.append(node("p","Entrance quiet. Next group in "+Math.max(0,state.nextArrival-state.seconds)+" active seconds."));
+ $("community-log").textContent=state.log;
+ document.querySelectorAll("[data-choice]").forEach(b=>{
+ b.disabled=!f||(["admit","temporary"].includes(b.dataset.choice)?!f.canAdmit:b.dataset.choice==="supplies"&&(state.resources.food<f.foodCost||state.resources.water<f.waterCost));
+ });
+ const signature=JSON.stringify([state.people.map(p=>[p.id,p.job,p.health===100]),state.cells]);
+ if(signature!==peopleSignature){
+ peopleSignature=signature;$("people").replaceChildren();
+ for(const p of state.people){
+ const card=node("div","");card.className="person";
+ card.append(node("strong",p.name+" · "+(p.child?"Child":p.skill)));
+ const health=node("p","");health.dataset.person=p.id;card.append(health);
+ const label=node("label","Assignment for "+p.name);label.className="hint";
+ const select=document.createElement("select");select.setAttribute("aria-label","Assignment for "+p.name);
+ select.append(new Option("Rest / unassigned",""));
+ for(const [k,t] of Object.entries(state.cells))if(E.JOBS[t]){
+ const o=new Option(E.ROOMS[t].name+" · "+k,k);
+ o.disabled=state.people.some(other=>other.id!==p.id&&other.job===k)||(t==="clinic"&&p.skill!=="doctor");
+ select.append(o);
+ }
+ select.value=p.job||"";select.disabled=p.child||p.health<100;
+ select.onchange=()=>act(()=>E.assign(state,p.id,select.value||null));label.append(select);card.append(label);$("people").append(card);
+ }
+ }
+ document.querySelectorAll("[data-person]").forEach(el=>{
+ const p=state.people.find(p=>p.id===el.dataset.person);
+ el.textContent=(p.health<100?"Recovering · "+Math.floor(p.health)+"%":"Healthy")+(p.until!==null?" · Guest: "+Math.max(0,p.until-state.seconds)+"s remaining":" · Permanent resident");
+ });
+}
+function refreshCommunity(){renderCommunity();}
+
 function message(text){$("message").textContent=text;}
 function save(){try{localStorage.setItem(SAVE,JSON.stringify(state));$("save-status").textContent="Progress saved on this device.";}catch(e){$("save-status").textContent="Automatic saving unavailable. Use Export save to keep your progress.";}}
 function updateResources(){
  const cap=E.capacity(state);
- $("resources").replaceChildren(...["materials","food","water","power"].map(n=>{
+ $("resources").replaceChildren(...["materials","food","water","power","medicine"].map(n=>{
  const el=document.createElement("div");el.className="resource";
  const label=document.createElement("small");label.textContent=n.toUpperCase();
  const value=document.createElement("strong");value.textContent=Math.floor(state.resources[n])+(cap[n]?" / "+cap[n]:"");
@@ -41,10 +85,11 @@ function renderPanel(){
  b.onclick=()=>act(()=>E.build(state,x,y,id));$("catalog").append(b);
  }
 }
-function render(){updateResources();renderGrid();renderPanel();}
+function render(){updateResources();renderGrid();renderPanel();renderCommunity();}
 function act(fn){const r=fn();message(r.message);save();render();}
 $("dig").onclick=()=>selected&&act(()=>E.dig(state,selected.x,selected.y));
-$("invite").onclick=()=>act(()=>E.invite(state));
+document.querySelectorAll("[data-choice]").forEach(b=>b.onclick=()=>act(()=>E.decide(state,b.dataset.choice)));
+$("medicine").onclick=()=>act(()=>E.medicine(state));
 $("salvage").onclick=()=>act(()=>{state.resources.materials=Math.min(1000000,state.resources.materials+25);return {message:"Recovered 25 building materials from entrance supplies."};});
 $("pause").onclick=()=>{paused=!paused;$("pause").textContent=paused?"Resume":"Pause";message(paused?"Simulation paused. You can still plan and build.":"Simulation resumed.");};
 $("export").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="bunker-tycoon-save.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
@@ -56,7 +101,7 @@ $("import").onchange=async event=>{
  }catch(e){message("Could not import this file. Your current bunker is unchanged.");}finally{event.target.value="";}
 };
 setInterval(()=>{
- if(paused||document.hidden)return;report=E.step(state);updateResources();
+ if(paused||document.hidden)return;report=E.step(state);updateResources();refreshCommunity();
  document.querySelectorAll("[data-status]").forEach(el=>el.textContent=report.status[el.dataset.status]||"");
  // Refresh affordability without rebuilding controls or moving keyboard focus.
  if(selected){const {x,y}=selected;$("dig").disabled=!E.canDig(state,x,y)||state.resources.materials<E.digCost(y);

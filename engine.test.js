@@ -30,11 +30,6 @@ test("long simulation respects resource bounds and resident safety",()=>{
  s.cells["1:0"]="empty";s.cells["4:0"]="empty";
  for(let i=0;i<2000;i++)E.step(s);assert(s.residents===4);assert(s.resources.food===0);
 });
-test("residents require beds and arrival supplies",()=>{
- const s=E.initial();assert(!E.invite(s).ok);E.dig(s,0,0);E.build(s,0,0,"quarters");
- const food=s.resources.food;assert(E.invite(s).ok);assert(s.residents===5&&s.resources.food===food-20);
- s.resources.food=0;assert(!E.invite(s).ok);
-});
 test("save round trip preserves progress",()=>{
  const s=E.initial();E.dig(s,3,1);E.dig(s,4,1);E.build(s,4,1,"tank");E.step(s);
  assert(JSON.stringify(E.restore(JSON.stringify(s)))===JSON.stringify(s));
@@ -43,4 +38,59 @@ test("invalid and disconnected saves are rejected",()=>{
  rejects(()=>E.restore("bad"));const s=E.initial();s.cells["0:7"]="farm";rejects(()=>E.restore(JSON.stringify(s)));
  delete s.cells["0:7"];s.resources.food=-1;rejects(()=>E.restore(JSON.stringify(s)));
 });
+
+test("admission is atomic and keeps families together",()=>{
+ const s=E.initial(),before=JSON.stringify(s);assert(!E.decide(s,"admit").ok);assert(JSON.stringify(s)===before);
+ E.dig(s,0,0);E.build(s,0,0,"quarters");assert(E.forecast(s).beds===7);
+ assert(E.decide(s,"admit").ok);assert(s.residents===7);assert(s.people.some(p=>p.child));
+ assert(s.people.filter(p=>p.id.startsWith("arrival-")).every(p=>p.job===null));
+ assert(s.resources.food===65);assert(!E.decide(s,"admit").ok);
+});
+test("arrival choices consume appropriate resources",()=>{
+ const s=E.initial();assert(E.decide(s,"supplies").ok);assert(s.residents===4&&s.resources.food===65);
+ for(let i=0;i<120;i++)E.step(s);assert(s.arrival.name==="Civilian medical team");
+ const food=s.resources.food;assert(E.decide(s,"decline").ok);assert(s.resources.food===food);
+});
+test("temporary guests leave together and save their expiry",()=>{
+ const s=E.initial();E.dig(s,0,0);E.build(s,0,0,"quarters");assert(E.decide(s,"temporary").ok);
+ const restored=E.restore(JSON.stringify(s));for(let i=0;i<180;i++)E.step(restored);
+ assert(restored.residents===4);assert(restored.people.every(p=>p.until===null));assert(restored.arrival!==null);
+});
+test("staffing enforces availability, skill and one worker per room",()=>{
+ const s=E.initial();assert(!E.assign(s,"resident-3","1:0").ok);
+ E.assign(s,"resident-2",null);const food=s.resources.food;assert(E.step(s).status["1:0"]==="Needs worker");assert(s.resources.food<food);
+ assert(E.assign(s,"resident-3","1:0").ok);assert(E.step(s).production.food===2);
+ E.assign(s,"resident-3",null);E.assign(s,"resident-2","1:0");assert(E.step(s).production.food===2.5);
+});
+test("patients need staffed clinic, power and medicine to recover",()=>{
+ const s=E.initial();E.dig(s,0,0);E.build(s,0,0,"quarters");E.decide(s,"admit");
+ const child=s.people.find(p=>p.child),patient=s.people.find(p=>p.health<100);
+ assert(!E.assign(s,child.id,"4:0").ok);assert(!E.assign(s,patient.id,"4:0").ok);
+ E.dig(s,6,0);s.resources.materials=200;assert(E.build(s,6,0,"clinic").ok);
+ assert(!E.assign(s,"resident-2","6:0").ok);assert(E.assign(s,"resident-3","6:0").ok);
+ const before=patient.health;s.resources.medicine=0;E.step(s);assert(patient.health===before);
+ assert(E.medicine(s).ok);E.step(s);assert(patient.health>before);
+ s.resources.medicine=20;for(let i=0;i<100;i++)E.step(s);assert(patient.health===100);
+});
+test("forecasts leave state untouched and predict stock levels",()=>{
+ const s=E.initial();E.dig(s,0,0);E.build(s,0,0,"quarters");
+ const before=JSON.stringify(s),f=E.forecast(s);assert(JSON.stringify(s)===before);
+ E.decide(s,"admit");for(let i=0;i<60;i++)E.step(s);
+ assert(Math.abs(s.resources.food-f.foodAfter)<0.000001);assert(Math.abs(s.resources.water-f.waterAfter)<0.000001);
+});
+test("version one saves migrate without losing buildings or supplies",()=>{
+ const s=E.initial();const legacy={version:1,cells:s.cells,resources:{materials:123,food:70,water:60,power:30},residents:4,seconds:42};
+ const r=E.restore(JSON.stringify(legacy));assert(r.version===2&&r.people.length===4&&r.resources.materials===123&&r.seconds===42);
+});
+test("tampered people and assignments are rejected",()=>{
+ const s=E.initial();s.people[1].id=s.people[0].id;rejects(()=>E.restore(JSON.stringify(s)));
+ const t=E.initial();t.people[1].job=t.people[0].job;rejects(()=>E.restore(JSON.stringify(t)));
+ const u=E.initial();u.arrival.people[0].health=-1;rejects(()=>E.restore(JSON.stringify(u)));
+});
+test("medical forecasts never heal the actual waiting group",()=>{
+ const s=E.initial();s.resources.materials=1000;
+ E.dig(s,0,0);E.build(s,0,0,"quarters");E.dig(s,6,0);E.build(s,6,0,"clinic");E.assign(s,"resident-3","6:0");
+ const before=JSON.stringify(s);E.forecast(s);assert(JSON.stringify(s)===before);
+});
 console.log(count+" simulation tests passed.");
+

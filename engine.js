@@ -1,6 +1,6 @@
 "use strict";
 (function(root) {
-const WIDTH=7, DEPTH=8, VERSION=1;
+const WIDTH=7, DEPTH=8, VERSION=2;
 const ROOMS={
   generator:{name:"Generator",icon:"⚡",cost:90,color:"#d3a544",description:"Produces 6 power/s.",power:6},
   pump:{name:"Water treatment",icon:"💧",cost:80,color:"#59aac4",description:"Uses 1 power/s to make 2 water/s."},
@@ -11,17 +11,19 @@ const ROOMS={
   quarters:{name:"Living quarters",icon:"⌂",cost:80,color:"#d18d90",description:"Adds space for 4 residents."},
   workshop:{name:"Workshop",icon:"⚒",cost:100,color:"#c5aa7d",description:"Uses 2 power/s to recover 1 material/s."}
 };
+ROOMS.clinic={name:"Clinic",icon:"✚",cost:120,color:"#c57979",description:"One assigned doctor treats one patient. Uses 1 power + 0.05 medicine/s."};
+for(const t of ["generator","pump","farm","workshop"])ROOMS[t].description+=" Requires one healthy adult assigned here; matching skills give +25% output.";
 const key=(x,y)=>x+":"+y;
 function initial(){
  const cells={};
  cells[key(3,0)]="shaft"; cells[key(2,0)]="generator"; cells[key(4,0)]="pump";
  cells[key(1,0)]="farm"; cells[key(5,0)]="quarters";
- return {version:VERSION,cells,resources:{materials:400,food:80,water:80,power:40},residents:4,seconds:0};
+ return community({version:VERSION,cells,resources:{materials:400,food:80,water:80,power:40},residents:4,seconds:0});
 }
 function capacity(s){
- const c={food:120,water:120,power:60,housing:0};
+ const c={food:120,water:120,power:60,housing:0,medicine:100,medical:0};
  Object.values(s.cells).forEach(t=>{
- if(t==="pantry")c.food+=150;if(t==="tank")c.water+=150;
+ if(t==="clinic")c.medical++;if(t==="pantry")c.food+=150;if(t==="tank")c.water+=150;
  if(t==="battery")c.power+=100;if(t==="quarters")c.housing+=4;
  });return c;
 }
@@ -43,37 +45,49 @@ function build(s,x,y,type){
  s.resources.materials-=ROOMS[type].cost;s.cells[key(x,y)]=type;
  return {ok:true,message:ROOMS[type].name+" built."};
 }
-function invite(s){
- if(s.residents>=capacity(s).housing)return {ok:false,message:"Build living quarters first."};
- if(s.resources.food<20||s.resources.water<20)return {ok:false,message:"Welcoming a resident needs 20 food and 20 water."};
- s.resources.food-=20;s.resources.water-=20;s.residents++;
- return {ok:true,message:"A new resident has joined the shelter."};
-}
+function invite(s){return decide(s,"admit");}
 function step(s){
  const r=s.resources,c=capacity(s), before={...r};
  const status={}; const entries=Object.entries(s.cells);
  const production={food:0,water:0,power:0,materials:0};
  function add(name,amount){const gain=Math.max(0,Math.min(amount,(c[name]??1000000)-r[name]));r[name]+=gain;production[name]+=gain;}
- for(const [k,t] of entries)if(t==="generator"){add("power",6);status[k]="Generating power";}
+ for(const [k,t] of entries)if(t==="generator"){
+ const w=worker(s,k);if(!w){status[k]="Needs worker";continue;}
+ add("power",6*efficiency(w,t));status[k]="Generating power";
+}
  for(const type of ["pump","farm","workshop"]){
   for(const [k,t] of entries.filter(e=>e[1]===type)){
+   const w=worker(s,k);if(!w){status[k]="Needs worker";continue;}
    const out=t==="pump"?"water":t==="farm"?"food":"materials";
    const cost=t==="pump"?1:2;
    if(r[out]>=(c[out]??1000000)){status[k]="Storage full";continue;}
    if(r.power<cost){status[k]="Needs power";continue;}
    if(t==="farm"&&r.water<1){status[k]="Needs water";continue;}
    r.power-=cost;if(t==="farm")r.water--;
-   add(out,t==="workshop"?1:2);status[k]="Operating";
+   add(out,(t==="workshop"?1:2)*efficiency(w,t));status[k]="Operating";
   }
  }
- const need=s.residents*0.12;
+ const patients=s.people.filter(p=>p.health<100);
+ const treated=new Set();
+ for(const [k,t] of entries)if(t==="clinic"){
+  const w=worker(s,k);
+  if(!w||w.skill!=="doctor"){status[k]="Needs doctor";continue;}
+  const p=patients.find(p=>!treated.has(p.id));
+  if(!p){status[k]="No patients";continue;}
+  if(r.power<1||r.medicine<0.05){status[k]="Needs power / medicine";continue;}
+  r.power--;r.medicine=Math.max(0,r.medicine-0.05);p.health=Math.min(100,p.health+0.5);treated.add(p.id);status[k]="Treating "+p.name;
+ }
+ const need=s.people.reduce((n,p)=>n+(p.child?0.08:0.12),0);
  r.food=Math.max(0,r.food-need);r.water=Math.max(0,r.water-need);
  s.seconds++;
+ const leaving=s.people.filter(p=>p.until!==null&&p.until<=s.seconds);
+ if(leaving.length){s.people=s.people.filter(p=>!leaving.includes(p));s.log="Temporary guests continued to the civilian evacuation point.";s.residents=s.people.length;}
+ if(!s.arrival&&s.seconds>=s.nextArrival)s.arrival=makeArrival(s.arrivalIndex);
  return {status,production,net:Object.fromEntries(Object.keys(r).map(k=>[k,r[k]-before[k]])),shortage:r.food===0||r.water===0};
 }
 function restore(raw){
  const s=JSON.parse(raw);
- if(!s||s.version!==VERSION||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
+ if(!s||![1,VERSION].includes(s.version)||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
  for(const n of ["materials","food","water","power"])if(!Number.isFinite(s.resources[n])||s.resources[n]<0||s.resources[n]>1000000)throw Error("Invalid resources");
  const cells={};
  for(const [k,t] of Object.entries(s.cells)){
@@ -88,11 +102,97 @@ function restore(raw){
  const k=key(a,b);if(cells[k]&&!seen.has(k)){seen.add(k);queue.push([a,b]);}
  }}
  if(seen.size!==Object.keys(cells).length)throw Error("Disconnected chambers");
- const clean={version:VERSION,cells,resources:{...s.resources},residents:s.residents,seconds:s.seconds};
+ let clean={version:VERSION,cells,resources:{...s.resources},residents:s.residents,seconds:s.seconds};
+ if(s.version===1)clean=community(clean);else {validateCommunity(s,cells);Object.assign(clean,{people:s.people,arrivalIndex:s.arrivalIndex,arrival:s.arrival,nextArrival:s.nextArrival,log:typeof s.log==="string"?s.log.slice(0,200):""});}
  const cap=capacity(clean);if(clean.residents>cap.housing)throw Error("Insufficient housing");
  for(const n of ["food","water","power"])clean.resources[n]=Math.min(clean.resources[n],cap[n]);
  return clean;
 }
-const api={WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
+
+const JOBS={generator:"engineer",pump:"water",farm:"farmer",workshop:"engineer",clinic:"doctor"};
+const SKILLS=["engineer","water","farmer","doctor","general"];
+function person(id,name,skill,health=100,child=false){return {id,name,skill,health,child,job:null,until:null};}
+function makeArrival(index){
+ const groups=[
+ {name:"The Vale family",story:"A family displaced by fighting needs shelter together.",people:[person("a","Mara","farmer"),person("b","Eli","engineer",60),person("c","Kit","general",100,true)]},
+ {name:"Civilian medical team",story:"Two volunteers have left an evacuated field hospital.",people:[person("a","Sam","doctor"),person("b","Nuri","water")]},
+ {name:"Evacuated neighbours",story:"Three neighbours reached your entrance after their district lost power.",people:[person("a","Jo","general",80),person("b","Ren","farmer"),person("c","Alex","engineer")]}
+ ];
+ const g=groups[index%groups.length];return {name:g.name,story:g.story,people:g.people.map(p=>({...p,id:"arrival-"+index+"-"+p.id}))};
+}
+function community(s){
+ s.resources.medicine=20;s.people=[];
+ const starters=[["Ada","engineer","2:0"],["Noor","water","4:0"],["Rose","farmer","1:0"],["Leon","doctor",null]];
+ for(let i=0;i<s.residents;i++){const p=person("resident-"+i,starters[i]?.[0]||"Resident "+(i+1),starters[i]?.[1]||"general");
+ const job=starters[i]?.[2];if(job&&JOBS[s.cells[job]])p.job=job;s.people.push(p);}
+ s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
+ return s;
+}
+function worker(s,k){return s.people.find(p=>p.job===k&&!p.child&&p.health>=100);}
+function efficiency(p,t){return p.skill===JOBS[t]?1.25:1;}
+function assign(s,id,k){
+ const p=s.people.find(p=>p.id===id);
+ if(!p)return {ok:false,message:"Resident not found."};
+ if(k===null){p.job=null;return {ok:true,message:p.name+" is resting."};}
+ if(p.child||p.health<100)return {ok:false,message:"Children and recovering residents cannot work."};
+ if(!JOBS[s.cells[k]])return {ok:false,message:"Choose a working facility."};
+ if(s.cells[k]==="clinic"&&p.skill!=="doctor")return {ok:false,message:"A clinic needs a trained doctor."};
+ if(s.people.some(other=>other.id!==id&&other.job===k))return {ok:false,message:"That facility is already staffed."};
+ p.job=k;return {ok:true,message:p.name+" assigned to "+ROOMS[s.cells[k]].name+"."};
+}
+function forecast(s){
+ if(!s.arrival)return null;
+ const people=s.arrival.people,cap=capacity(s),n=people.length;
+ const demand=people.reduce((v,p)=>v+(p.child?0.08:0.12),0);
+ const doctors=Object.entries(s.cells).filter(([k,t])=>t==="clinic"&&worker(s,k)?.skill==="doctor").length;
+ const projected=JSON.parse(JSON.stringify(s));
+ projected.people.push(...JSON.parse(JSON.stringify(people)));projected.residents=projected.people.length;projected.arrival=null;projected.nextArrival=projected.seconds+1000;
+ projected.resources.food=Math.max(0,projected.resources.food-n*5);projected.resources.water=Math.max(0,projected.resources.water-n*5);
+ for(let i=0;i<60;i++)step(projected);
+ return {foodAfter:projected.resources.food,waterAfter:projected.resources.water,count:n,beds:s.residents+n,capacity:cap.housing,foodCost:n*5,waterCost:n*5,
+ extraDemand:demand,patients:s.people.concat(people).filter(p=>p.health<100).length,
+ medical:doctors,canAdmit:s.residents+n<=cap.housing&&s.resources.food>=n*5&&s.resources.water>=n*5};
+}
+function decide(s,choice){
+ if(!s.arrival)return {ok:false,message:"No group is waiting. New arrivals appear after 120 active seconds."};
+ if(!["admit","temporary","supplies","decline"].includes(choice))return {ok:false,message:"Unknown decision."};
+ const f=forecast(s),group=s.arrival;
+ if(["admit","temporary"].includes(choice)&&!f.canAdmit)return {ok:false,message:"The whole group needs "+f.count+" free beds and "+f.foodCost+" food + water."};
+ if(choice==="supplies"&&(s.resources.food<f.foodCost||s.resources.water<f.waterCost))return {ok:false,message:"Insufficient supplies for this group."};
+ if(choice!=="decline"){s.resources.food-=f.foodCost;s.resources.water-=f.waterCost;}
+ if(choice==="admit"||choice==="temporary"){
+  for(const p of group.people)s.people.push({...p,until:choice==="temporary"?s.seconds+180:null});
+  s.residents=s.people.length;
+ }
+ s.log=choice==="admit"?group.name+" joined the community. Assign healthy adults to facilities.":choice==="temporary"?group.name+" sheltered for 180 active seconds before onward evacuation.":choice==="supplies"?group.name+" received supplies and continued to an evacuation point.":group.name+" left the entrance. Their onward journey is unknown.";
+ s.arrival=null;s.arrivalIndex++;s.nextArrival=s.seconds+120;
+ return {ok:true,message:s.log};
+}
+function medicine(s){
+ if(s.resources.materials<20||s.resources.medicine>95)return {ok:false,message:"Needs 20 materials and space for 5 medicine."};
+ s.resources.materials-=20;s.resources.medicine+=5;return {ok:true,message:"Exchanged 20 materials for 5 medicine through the relief network."};
+}
+function validateCommunity(s,cells){
+ if(!Number.isFinite(s.resources.medicine)||s.resources.medicine<0||s.resources.medicine>100)throw Error("Invalid medicine");
+ if(!Array.isArray(s.people)||s.people.length!==s.residents||!Number.isSafeInteger(s.arrivalIndex)||s.arrivalIndex<0||!Number.isSafeInteger(s.nextArrival)||s.nextArrival<0)throw Error("Invalid community");
+ const ids=new Set(),jobs=new Set();
+ function check(p,arrival=false){
+  if(!p||typeof p.id!=="string"||p.id.length>80||ids.has(p.id)||typeof p.name!=="string"||!p.name.length||p.name.length>60||!SKILLS.includes(p.skill)||typeof p.child!=="boolean"||!Number.isFinite(p.health)||p.health<0||p.health>100||!(p.until===null||Number.isSafeInteger(p.until)&&p.until>s.seconds))throw Error("Invalid person");
+  ids.add(p.id);
+  if(p.job!==null){
+   if(arrival||p.child||p.health<100||typeof p.job!=="string"||!JOBS[cells[p.job]]||jobs.has(p.job)||(cells[p.job]==="clinic"&&p.skill!=="doctor"))throw Error("Invalid assignment");
+   jobs.add(p.job);
+  }
+  if(arrival&&p.until!==null)throw Error("Invalid guest");
+ }
+ s.people.forEach(p=>check(p));
+ if(s.arrival!==null){
+  const expected=makeArrival(s.arrivalIndex);
+  if(JSON.stringify(s.arrival)!==JSON.stringify(expected))throw Error("Invalid arrival");
+  s.arrival.people.forEach(p=>check(p,true));
+ }
+}
+
+const api={JOBS,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.Bunker=api;
 })(typeof globalThis!=="undefined"?globalThis:this);
