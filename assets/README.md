@@ -9,6 +9,6 @@ Original editable SVG implementations of the simple mobile concept approved in t
 - Residents appear in working rooms only when a healthy adult is assigned. Quarters show resident portraits as a housing illustration.
 - Portraits are static and shared by profession; they are not yet unique likenesses, movement, or a detailed housing simulation.
 - The original seven-column/eight-floor simulation and existing saves are retained. Detail view pans horizontally; Overview provides a smaller map view.
-- Browser visual inspection, physical-device testing, contrast measurement and performance profiling remain outstanding.
+- Automated Chromium interaction/layout checks passed at 390×844 and 1366×900 in GitHub run 43975924919. Human visual inspection, physical-device testing, contrast measurement and performance profiling remain outstanding.
 
 This is a first implemented visual direction. Runtime UI labels and controls remain separate so counters, room status, accessibility names and actions reflect actual game state.
