@@ -51,7 +51,7 @@ function roomResidents(k,t){
  if(E.JOBS[t])return worker?[worker]:[];
  if(t==="quarters"){
  const quarters=Object.keys(state.cells).filter(k=>state.cells[k]==="quarters"),index=quarters.indexOf(k);
- return state.people.slice(index*4,index*4+2);
+ return state.people.slice(index*4,index*4+4).filter(p=>!p.job||p.child||p.health<100).slice(0,2);
  }return [];
 }
 function roomScene(k,t){
