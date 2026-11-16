@@ -55,3 +55,7 @@ Placeholder visuals; no animated residents, fatigue/rest cycles, training, sanit
 3. Progression, research, expeditions and a first-session tutorial.
 4. Original visual identity, audio and performance profiling.
 5. Select native packaging after the core loop is validated.
+
+## Master development brief
+
+Read [the master development prompt and game bible](docs/MASTER_DEVELOPMENT_PROMPT.md) for the proposed world, cast, Lantern Credits economy, production standards and milestone plan. This planning document distinguishes existing functionality from future proposals; it does not change the playable prototype.
