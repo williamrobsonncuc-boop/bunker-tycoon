@@ -289,3 +289,19 @@ button:active{transform:translateY(2px) scale(.985)}
 }
 @keyframes room-lamp{0%,100%{filter:sepia(.18) saturate(.78) contrast(1.08) brightness(.98)}48%{filter:sepia(.14) saturate(.84) contrast(1.08) brightness(1.04)}52%{filter:sepia(.2) saturate(.74) contrast(1.1) brightness(.94)}}
 @keyframes room-flicker{0%,100%{opacity:.3}48%{opacity:.46}52%{opacity:.18}56%{opacity:.35}}
+
+/* Character art pass — field-manual presentation */
+.portrait{
+  filter:sepia(.2) saturate(.72) contrast(1.08);
+  background:linear-gradient(145deg,#d7c4a3,#8d806a);
+  border:1px solid #76634b;
+  box-shadow:2px 2px 0 #4c4236;
+  object-fit:contain;
+}
+.person .portrait,.arrival-person img{
+  padding:2px;
+  border-radius:2px;
+}
+.room-character{
+  filter:sepia(.2) saturate(.74) contrast(1.08) drop-shadow(1px 2px 0 #30271f66);
+}
