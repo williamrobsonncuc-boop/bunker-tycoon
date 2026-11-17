@@ -168,8 +168,17 @@ if(!state.event){if(!state.request)box.append(node("p","No active alerts. The ne
  Object.entries(def.choices).forEach(([id,c])=>{const b=node("button",c.label);b.className="primary";b.onclick=()=>act(()=>E.resolveEvent(state,id));box.append(b);});
  if(state.eventLog?.length){const h=node("h3","Recent decisions");box.append(h);state.eventLog.slice().reverse().forEach(x=>box.append(node("p",x)));}
 }
-function sound(kind){
- try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const ctx=new C(),o=ctx.createOscillator(),g=ctx.createGain();o.type="triangle";o.frequency.value=kind?520:180;g.gain.setValueAtTime(.035,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.12);o.connect(g).connect(ctx.destination);o.start();o.stop(ctx.currentTime+.12);}catch(e){}
+function sound(kind="success"){
+ try{
+  const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+  const ctx=new C(),now=ctx.currentTime;
+  const tones=kind==="error"?[150,110]:kind==="alert"?[260,390,260]:[420,560];
+  tones.forEach((frequency,index)=>{
+   const o=ctx.createOscillator(),g=ctx.createGain();o.type=kind==="alert"?"sine":"triangle";o.frequency.value=frequency;
+   const start=now+index*.07;g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(kind==="alert"?.045:.03,start+.015);g.gain.exponentialRampToValueAtTime(.0001,start+.13);
+   o.connect(g).connect(ctx.destination);o.start(start);o.stop(start+.14);
+  });
+ }catch(e){}
 }
 function renderHome(){
  const el=$("home-summary");if(!el)return;const cap=E.capacity(state);el.textContent="Haven 17 · "+state.residents+" people · "+cap.housing+" beds · "+Math.round(state.morale??62)+"% civil-defence status";
@@ -186,7 +195,7 @@ function renderSettings(){
 }
 function todayDay(){return Math.floor(Date.now()/86400000);}
 function render(){updateResources();renderGrid();renderPanel();renderCommunity();if(panel==="activities")renderActivities();if(panel==="home")renderHome();if(panel==="settings")renderSettings();if(panel==="alerts")renderAlerts();}
-function act(fn){const r=fn();message(r.message);if(r.ok!==false){save();sound(true);}else sound(false);estimateReport();render();}
+function act(fn){const r=fn();message(r.message);if(r.ok!==false){save();sound("success");}else sound("error");estimateReport();render();}
 function centerShaft(){const tile=document.querySelector('[data-cell="3:0"]');if(tile)$("map-scroll").scrollLeft=Math.max(0,tile.offsetLeft-$("grid").offsetLeft+tile.offsetWidth/2-$("map-scroll").clientWidth/2);}
 $("center").onclick=centerShaft;
 $("zoom").onclick=()=>{const on=document.body.classList.toggle("overview");$("zoom").textContent=on?"Room detail":"Overview";$("zoom").setAttribute("aria-pressed",String(on));requestAnimationFrame(centerShaft);};
