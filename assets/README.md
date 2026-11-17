@@ -12,3 +12,8 @@ Original editable SVG implementations of the simple mobile concept approved in t
 - Automated Chromium interaction/layout checks passed at 390×844 and 1366×900 in GitHub run 43975924919. Human visual inspection, physical-device testing, contrast measurement and performance profiling remain outstanding.
 
 This is a first implemented visual direction. Runtime UI labels and controls remain separate so counters, room status, accessibility names and actions reflect actual game state.
+
+
+## Government-facility visual direction
+
+The runtime palette has shifted from bright toy colours to a restrained civil-defence system: charcoal ink, concrete grey, paper white, olive/steel accents and amber warning states. Room scenes remain simple editable SVGs so the game stays legible on a phone while the production pass develops more architectural materials, signage, lighting and character specificity.

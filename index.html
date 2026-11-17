@@ -11,7 +11,7 @@
 <header class="topbar"><div class="brand"><span>HAVEN 17</span><small>BUNKER TYCOON</small></div><button id="pause" aria-pressed="false">Pause</button></header>
 <main>
 <section id="resources" aria-label="Shelter resources"></section>
-<div class="shelter-toolbar"><p id="shelter-summary"></p><button id="zoom" aria-pressed="false">Overview</button></div>
+<div class="shelter-toolbar"><p id="shelter-summary"></p><span id="morale" class="status-seal">CIVIL DEFENCE STATUS · STABLE</span><button id="zoom" aria-pressed="false">Overview</button></div>
 <div class="layout">
 <section class="world" aria-label="Bunker cutaway">
 <div class="surface"><img src="assets/surface.svg" alt="A civilian bunker entrance beneath a damaged city skyline" width="900" height="210"><span class="surface-caption">A home beneath the surface</span></div>
@@ -29,6 +29,7 @@
 </section>
 <section data-panel="people" hidden><h2 tabindex="-1">Your community</h2><p id="population"></p><p class="hint">Each facility needs a healthy adult. Matching skills add 25% output; clinics require a doctor.</p><div id="people"></div></section>
 <section data-panel="entrance" hidden><h2 tabindex="-1">At the entrance</h2><div id="arrival"></div><div id="decision-buttons"><button data-choice="admit" class="primary">Admit the whole group</button><button data-choice="temporary">Temporary shelter · 180 seconds</button><button data-choice="supplies">Provide supplies</button><button data-choice="decline">Turn the group away</button></div><p id="community-log" class="hint"></p></section>
+<section data-panel="activities" hidden><h2 tabindex="-1">Operations &amp; archive</h2><div id="activities"></div></section>
 <section data-panel="supplies" hidden><h2 tabindex="-1">Supplies &amp; saves</h2><button id="medicine">Relief exchange · 20 materials → 5 medicine</button><button id="salvage">Recover supplies · +25 materials</button><p class="hint">Recovery is unlimited in this prototype. Simulation pauses when the app is hidden.</p><p id="save-status" class="hint"></p><button id="export">Export save</button><label class="import">Import save<input id="import" type="file" accept=".json,application/json"></label></section>
 </aside>
 </div>
@@ -36,6 +37,6 @@
 <p class="footnote">World War 3 · Civilian shelter · Prototype</p>
 </main>
 <nav class="dock" aria-label="Shelter navigation">
-<button data-open="build" id="build-button" class="primary">Build</button><button data-open="people">People</button><button data-open="entrance">Entrance<span id="arrival-dot" class="dot" hidden aria-label="Group waiting"></span></button><button data-open="supplies">Supplies</button>
+<button data-open="build" id="build-button" class="primary">Build</button><button data-open="people">People</button><button data-open="entrance">Entrance<span id="arrival-dot" class="dot" hidden aria-label="Group waiting"></span></button><button data-open="activities">Operations</button><button data-open="supplies">Supplies</button>
 </nav>
 </body></html>

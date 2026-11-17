@@ -27,6 +27,7 @@ function showPanel(name,focus=true){
  document.querySelectorAll("[data-panel]").forEach(el=>el.hidden=el.dataset.panel!==name);
  document.querySelectorAll("[data-open]").forEach(b=>{b.setAttribute("aria-expanded",String(b.dataset.open===name));b.setAttribute("aria-controls","controls");});
  if(name==="people"||name==="entrance")renderCommunity();
+ if(name==="activities")renderActivities();
  if(focus)document.querySelector('[data-panel="'+name+'"] h2').focus();
 }
 function closePanel(){
@@ -43,7 +44,8 @@ function updateResources(){
  el.append(icon(n,"resource-icon"),label,value,rate);return el;
  }));
  $("population").textContent=state.residents+" residents · "+cap.housing+" beds";
- $("shelter-summary").textContent=state.residents+" people · "+cap.housing+" beds · "+(paused?"Paused":"Shelter active");
+ $("shelter-summary").textContent=state.residents+" residents · "+cap.housing+" beds · "+(paused?"Paused":"Shelter active");
+ const morale=$("morale");if(morale){const m=Math.round(state.morale??62);morale.textContent="CIVIL DEFENCE STATUS · "+(m>=75?"SECURE":m>=45?"STABLE":"STRAINED")+" · "+m+"%";morale.dataset.level=m>=75?"secure":m>=45?"stable":"strained";}
  $("arrival-dot").hidden=!state.arrival;
 }
 function roomResidents(k,t){
@@ -131,7 +133,24 @@ function renderCommunity(){
  const p=state.people.find(p=>p.id===el.dataset.person);el.textContent=(p.health<100?"Recovering · "+Math.floor(p.health)+"%":"Healthy")+(p.until!==null?" · Guest "+Math.max(0,p.until-state.seconds)+"s":" · Resident");
  });
 }
-function render(){updateResources();renderGrid();renderPanel();renderCommunity();}
+function renderActivities(){
+ const box=$("activities");if(!box)return;box.replaceChildren();
+ const intro=node("p","Operations keep the shelter feeling like a living installation: decode signals, recover stock, rehearse emergency procedure and watch the perimeter.");
+ intro.className="hint";box.append(intro);
+ const defs=E.ACTIVITY_DEFS||{},ops=state.activities||{last:{},completed:0,history:[]};
+ for(const [id,d] of Object.entries(defs)){
+  const card=node("article");card.className="activity-card";
+  const title=node("h3",d.name);const desc=node("p",d.brief+" "+d.description);desc.className="activity-copy";
+  const meta=node("p");meta.className="activity-meta";const costs=Object.entries(d.cost).map(([k,v])=>v+" "+k).join(" · ");const last=ops.last[id];const ready=last===undefined||state.seconds>=last+d.cooldown;meta.textContent=costs+" · "+(ready?"READY":"STANDBY "+(last+d.cooldown-state.seconds+"s"));
+  const b=node("button",ready?"Run operation":"On standby");b.className="primary";b.dataset.activity=id;b.disabled=!ready;
+  b.onclick=()=>act(()=>E.activity(state,id));card.append(title,desc,meta,b);box.append(card);
+ }
+ const completed=node("p","Operations completed: "+ops.completed);completed.className="hint";box.append(completed);
+ const archive=node("div");archive.className="lore-archive";archive.append(node("h3","Civil Defence Archive"));
+ (state.lore||[]).slice().reverse().forEach(line=>archive.append(node("p",line)));
+ box.append(archive);
+}
+function render(){updateResources();renderGrid();renderPanel();renderCommunity();if(panel==="activities")renderActivities();}
 function act(fn){const r=fn();message(r.message);if(r.ok!==false)save();estimateReport();render();}
 function centerShaft(){const tile=document.querySelector('[data-cell="3:0"]');if(tile)$("map-scroll").scrollLeft=Math.max(0,tile.offsetLeft-$("grid").offsetLeft+tile.offsetWidth/2-$("map-scroll").clientWidth/2);}
 $("center").onclick=centerShaft;
@@ -158,6 +177,7 @@ setInterval(()=>{
  if(signature!==visualSignature){visualSignature=signature;renderGrid();}
  document.querySelectorAll("[data-status]").forEach(el=>{const k=el.dataset.status;el.textContent=report.status[k]||(E.JOBS[state.cells[k]]?"Needs worker":"Ready");});
  if(selected){const {x,y}=selected;$("dig").disabled=!E.canDig(state,x,y)||state.resources.materials<E.digCost(y);document.querySelectorAll("[data-build]").forEach(b=>b.disabled=state.resources.materials<E.ROOMS[b.dataset.build].cost);}
+ if(panel==="activities")renderActivities();
  if(report.shortage)message("Supplies are low. Inspect farming, water and power. Residents are safe.");
  if(state.seconds%5===0)save();
 },1000);

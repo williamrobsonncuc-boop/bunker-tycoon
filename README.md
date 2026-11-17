@@ -62,3 +62,17 @@ The simple concept-art direction is translated into vector game assets; animatio
 ## Master development brief
 
 Read [the master development prompt and game bible](docs/MASTER_DEVELOPMENT_PROMPT.md) for the proposed world, cast, Lantern Credits economy, production standards and milestone plan. This planning document distinguishes existing functionality from future proposals; it does not change the playable prototype.
+
+
+## Current vertical slice update
+
+The shelter now includes a repeatable **Operations & Archive** panel:
+
+- Long-range radio: spend power to decode Civil Defence signals and build morale.
+- Salvage sortie: spend power and materials to recover a larger materials cache.
+- Civil-defence drill: spend power to improve morale and reveal the Lantern Programme history.
+- Perimeter watch: spend power to recover a smaller maintenance cache and surface a new story lead.
+
+Operations have cooldowns, explicit costs, readable standby states and an activity history. The save format migrates older v1/v2 saves to version 3, preserving the existing shelter. The interface now reports a Civil Defence status (secure/stable/strained) and includes an in-world archive for discovered lore.
+
+The visual treatment is moving toward a credible municipal emergency facility: concrete, steel, paper, olive and warning amber, with the high-contrast simple room silhouettes retained for mobile readability. The current art remains an editable prototype kit; final production art, animation and device review are still separate milestones.

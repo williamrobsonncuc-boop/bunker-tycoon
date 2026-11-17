@@ -1,6 +1,6 @@
 "use strict";
 (function(root) {
-const WIDTH=7, DEPTH=8, VERSION=2;
+const WIDTH=7, DEPTH=8, VERSION=3;
 const ROOMS={
   generator:{name:"Generator",icon:"⚡",cost:90,color:"#d3a544",description:"Produces 6 power/s.",power:6},
   pump:{name:"Water treatment",icon:"💧",cost:80,color:"#59aac4",description:"Uses 1 power/s to make 2 water/s."},
@@ -87,7 +87,7 @@ function step(s){
 }
 function restore(raw){
  const s=JSON.parse(raw);
- if(!s||![1,VERSION].includes(s.version)||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
+ if(!s||![1,2,VERSION].includes(s.version)||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
  for(const n of ["materials","food","water","power"])if(!Number.isFinite(s.resources[n])||s.resources[n]<0||s.resources[n]>1000000)throw Error("Invalid resources");
  const cells={};
  for(const [k,t] of Object.entries(s.cells)){
@@ -104,6 +104,8 @@ function restore(raw){
  if(seen.size!==Object.keys(cells).length)throw Error("Disconnected chambers");
  let clean={version:VERSION,cells,resources:{...s.resources},residents:s.residents,seconds:s.seconds};
  if(s.version===1)clean=community(clean);else {validateCommunity(s,cells);Object.assign(clean,{people:s.people,arrivalIndex:s.arrivalIndex,arrival:s.arrival,nextArrival:s.nextArrival,log:typeof s.log==="string"?s.log.slice(0,200):""});}
+ if(!Number.isFinite(s.morale))clean.morale=62;else clean.morale=Math.max(0,Math.min(100,s.morale));
+ clean.activities=normaliseActivities(s.activities);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];
  const cap=capacity(clean);if(clean.residents>cap.housing)throw Error("Insufficient housing");
  for(const n of ["food","water","power"])clean.resources[n]=Math.min(clean.resources[n],cap[n]);
  return clean;
@@ -120,12 +122,32 @@ function makeArrival(index){
  ];
  const g=groups[index%groups.length];return {name:g.name,story:g.story,people:g.people.map(p=>({...p,id:"arrival-"+index+"-"+p.id}))};
 }
+const ACTIVITY_DEFS={
+ radio:{name:"Long-range radio",brief:"Decode a surviving civil-defence broadcast.",cost:{power:3},cooldown:90,reward:"intel",description:"A quiet signal can reveal who is still out there.",lore:"The emergency network still repeats a three-note handshake from the old Civil Defence Authority."},
+ salvage:{name:"Salvage sortie",brief:"Send a two-person team to the rail cut.",cost:{power:4,materials:10},cooldown:150,reward:"materials",description:"Recover sealed crates before the surface patrols return.",lore:"The buried Millbank platform was designed as a logistics interchange, not a shelter. Someone stocked it anyway."},
+ drill:{name:"Civil defence drill",brief:"Run a timed shelter and fire-control exercise.",cost:{power:2},cooldown:120,reward:"morale",description:"Practice now, when the alarms are quiet.",lore:"Haven 17 was one of 312 municipal sites in the Lantern Programme. The paperwork survived; the chain of command did not."},
+ patrol:{name:"Perimeter watch",brief:"Check the hatch, vents and drainage line.",cost:{power:5},cooldown:180,reward:"materials",description:"A watch team keeps the entrance from becoming a blind spot.",lore:"The surface is not empty. Footprints keep appearing outside the hatch after rain."}
+};
+function freshActivities(){return {last:{},completed:0,history:[]};}
+function normaliseActivities(a){const out=freshActivities();if(!a||typeof a!=="object")return out;if(a.last&&typeof a.last==="object")for(const [k,v] of Object.entries(a.last))if(ACTIVITY_DEFS[k]&&Number.isSafeInteger(v)&&v>=0)out.last[k]=v;out.completed=Number.isSafeInteger(a.completed)&&a.completed>=0?a.completed:0;out.history=Array.isArray(a.history)?a.history.filter(v=>typeof v==="string").slice(-8):[];return out;}
+function activity(s,id){
+ const d=ACTIVITY_DEFS[id];if(!d)return {ok:false,message:"Unknown operation."};
+ s.activities=normaliseActivities(s.activities);const ready=(s.activities.last[id]??-Infinity)+d.cooldown;
+ if(s.seconds<ready)return {ok:false,message:d.name+" is on standby for "+(ready-s.seconds)+" seconds."};
+ for(const [n,cost] of Object.entries(d.cost))if((s.resources[n]||0)<cost)return {ok:false,message:"Operation needs "+cost+" "+n+"."};
+ for(const [n,cost] of Object.entries(d.cost))s.resources[n]-=cost;
+ let message="";
+ if(d.reward==="intel"){s.morale=Math.min(100,s.morale+4);message="Signal decoded. A route marker was added to the civil-defence map.";}
+ if(d.reward==="materials"){const gain=id==="salvage"?28:18;s.resources.materials=Math.min(1000000,s.resources.materials+gain);message=id==="salvage"?"Sortie returned with "+gain+" materials and a sealed ration manifest.":"Perimeter team recovered "+gain+" materials from a maintenance cache.";}
+ if(d.reward==="morale"){s.morale=Math.min(100,s.morale+12);message="Drill complete. Response time improved; morale rises.";}
+ s.activities.last[id]=s.seconds;s.activities.completed++;s.activities.history.push(d.name+" · "+message);s.activities.history=s.activities.history.slice(-8);s.lore=(s.lore||[]).concat(d.lore).slice(-8);s.log=message;return {ok:true,message};
+}
 function community(s){
  s.resources.medicine=20;s.people=[];
  const starters=[["Ada","engineer","2:0"],["Noor","water","4:0"],["Rose","farmer","1:0"],["Leon","doctor",null]];
  for(let i=0;i<s.residents;i++){const p=person("resident-"+i,starters[i]?.[0]||"Resident "+(i+1),starters[i]?.[1]||"general");
  const job=starters[i]?.[2];if(job&&JOBS[s.cells[job]])p.job=job;s.people.push(p);}
- s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
+ s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.morale=62;s.activities=freshActivities();s.lore=["2043 · Greywater Basin. The Long Blackout cut the region off from the surface.","Haven 17 was built under a decommissioned rail interchange by the Lantern Programme.","The first rule of the shelter is simple: every admission is a promise the systems must keep."];s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
  return s;
 }
 function worker(s,k){return s.people.find(p=>p.job===k&&!p.child&&p.health>=100);}
@@ -193,6 +215,6 @@ function validateCommunity(s,cells){
  }
 }
 
-const api={JOBS,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
+const api={JOBS,ACTIVITY_DEFS,activity,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.Bunker=api;
 })(typeof globalThis!=="undefined"?globalThis:this);
