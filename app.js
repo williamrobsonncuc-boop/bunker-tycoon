@@ -44,7 +44,7 @@ function updateResources(){
  el.append(icon(n,"resource-icon"),label,value,rate);return el;
  }));
  $("population").textContent=state.residents+" residents · "+cap.housing+" beds";
- $("shelter-summary").textContent=state.residents+" residents · "+cap.housing+" beds · "+(paused?"Paused":"Shelter active");
+ $("shelter-summary").textContent=state.residents+" people · "+cap.housing+" beds · "+(paused?"Paused":"Shelter active");
  const morale=$("morale");if(morale){const m=Math.round(state.morale??62);morale.textContent="CIVIL DEFENCE STATUS · "+(m>=75?"SECURE":m>=45?"STABLE":"STRAINED")+" · "+m+"%";morale.dataset.level=m>=75?"secure":m>=45?"stable":"strained";}
  $("arrival-dot").hidden=!state.arrival;
 }
