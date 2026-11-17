@@ -141,6 +141,9 @@ function renderActivities(){
  const daily=state.daily||{lastDay:null,streak:0,total:0},claimed=daily.lastDay===todayDay();const drop=node("article");drop.className="daily-drop"+(claimed?" claimed":"");drop.append(node("h3","Daily civil-defence supply drop"),node("p",claimed?"Today's crate is logged. Return tomorrow for the next handoff.":"A small, dependable supply handoff from the surviving municipal network."));const ds=node("p","Streak "+daily.streak+" · Drops received "+daily.total);ds.className="activity-meta";const db=node("button",claimed?"CLAIMED TODAY":"Claim today's drop");db.className="primary";db.disabled=claimed;db.onclick=()=>act(()=>E.dailyClaim(state,todayDay()));drop.append(ds,db);box.append(drop);
  const intro=node("p","Operations keep the shelter feeling like a living installation: decode signals, recover stock, rehearse emergency procedure and watch the perimeter.");
  intro.className="hint";box.append(intro);
+ const lm=state.landmark||{discovered:false,restored:false},land=node("article");land.className="landmark-card";land.append(node("h3","MILLBANK PLATFORM"));
+ const lp=node("p",lm.restored?"Operational interchange · +50 food, water and power capacity.":lm.discovered?"Survey complete · Restoration requires 8 residents, 180 materials and 20 power.":"Buried municipal rail interchange · an eastern expansion objective.");lp.className="activity-copy";land.append(lp);
+ const lb=node("button",lm.restored?"PLATFORM OPERATIONAL":lm.discovered?"Restore the platform":"Survey Millbank");lb.className="primary";lb.disabled=lm.restored;lb.onclick=()=>act(()=>lm.discovered?E.restoreLandmark(state):E.discoverLandmark(state));land.append(lb);box.append(land);
  const defs=E.ACTIVITY_DEFS||{},ops=state.activities||{last:{},completed:0,history:[]};
  for(const [id,d] of Object.entries(defs)){
   const card=node("article");card.className="activity-card";

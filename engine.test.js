@@ -80,7 +80,7 @@ test("forecasts leave state untouched and predict stock levels",()=>{
 });
 test("version one saves migrate without losing buildings or supplies",()=>{
  const s=E.initial();const legacy={version:1,cells:s.cells,resources:{materials:123,food:70,water:60,power:30},residents:4,seconds:42};
- const r=E.restore(JSON.stringify(legacy));assert(r.version===5&&r.people.length===4&&r.resources.materials===123&&r.seconds===42&&r.activities.completed===0&&r.daily.total===0&&r.chapter.claimed===false);
+ const r=E.restore(JSON.stringify(legacy));assert(r.version===6&&r.people.length===4&&r.resources.materials===123&&r.seconds===42&&r.activities.completed===0&&r.daily.total===0&&r.chapter.claimed===false);
 });
 test("tampered people and assignments are rejected",()=>{
  const s=E.initial();s.people[1].id=s.people[0].id;rejects(()=>E.restore(JSON.stringify(s)));
@@ -100,6 +100,9 @@ test("chapter objectives and resident traits are persistent",()=>{
 });
 test("alerts pause for a deliberate response",()=>{
  const s=E.initial();for(let i=0;i<180;i++)E.step(s);assert(s.event&&s.event.id==="ventilation");const before=s.resources.materials;assert(E.resolveEvent(s,"defer").ok);assert(!s.event&&s.eventLog.length===1&&s.resources.materials===before);
+});
+test("Millbank landmark rewards long-term expansion",()=>{
+ const s=E.initial();s.activities.completed=2;s.resources.materials=500;s.resources.power=50;assert(E.discoverLandmark(s).ok);assert(!E.discoverLandmark(s).ok);s.residents=8;s.people.push({id:"x1",name:"Test One",skill:"general",health:100,child:false,trait:"steady",job:null,until:null},{id:"x2",name:"Test Two",skill:"general",health:100,child:false,trait:"steady",job:null,until:null},{id:"x3",name:"Test Three",skill:"general",health:100,child:false,trait:"steady",job:null,until:null},{id:"x4",name:"Test Four",skill:"general",health:100,child:false,trait:"steady",job:null,until:null});assert(E.restoreLandmark(s).ok);assert(E.capacity(s).food===170);
 });
 console.log(count+" simulation tests passed.");
 

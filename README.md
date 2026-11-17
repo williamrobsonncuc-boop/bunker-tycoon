@@ -99,3 +99,8 @@ See [the playtest and business plan](docs/PLAYTEST_AND_BUSINESS_PLAN.md) for the
 The first chapter now generates deliberate civil-defence alerts during active play. Ventilation faults, uncertain radio bursts and surface inspections pause for a player response with visible costs and consequences. Choices are written into the archive rather than resolved invisibly.
 
 Successful and failed actions also receive restrained audio feedback through the browser's local audio context. The system is intentionally subtle and respects the reduced-motion setting; final authored sound assets remain a production milestone.
+
+
+## Landmark system
+
+The buried Millbank railway platform is now a playable long-term project. Players must complete operations, reserve resources and survey the platform, then later restore it with a larger community. Restoration increases food, water and power capacity and records a permanent change in the archive. This is the game's first signature discovery beyond ordinary room construction.

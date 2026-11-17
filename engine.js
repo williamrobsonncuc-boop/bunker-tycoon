@@ -1,6 +1,6 @@
 "use strict";
 (function(root) {
-const WIDTH=7, DEPTH=8, VERSION=5;
+const WIDTH=7, DEPTH=8, VERSION=6;
 const ROOMS={
   generator:{name:"Generator",icon:"⚡",cost:90,color:"#d3a544",description:"Produces 6 power/s.",power:6},
   pump:{name:"Water treatment",icon:"💧",cost:80,color:"#59aac4",description:"Uses 1 power/s to make 2 water/s."},
@@ -25,7 +25,7 @@ function capacity(s){
  Object.values(s.cells).forEach(t=>{
  if(t==="clinic")c.medical++;if(t==="pantry")c.food+=150;if(t==="tank")c.water+=150;
  if(t==="battery")c.power+=100;if(t==="quarters")c.housing+=4;
- });return c;
+ });if(s.landmark?.restored){c.food+=50;c.water+=50;c.power+=50;}return c;
 }
 function digCost(y){return 20+y*10;}
 function canDig(s,x,y){
@@ -88,7 +88,7 @@ function step(s){
 }
 function restore(raw){
  const s=JSON.parse(raw);
- if(!s||![1,2,3,4,VERSION].includes(s.version)||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
+ if(!s||![1,2,3,4,5,VERSION].includes(s.version)||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
  for(const n of ["materials","food","water","power"])if(!Number.isFinite(s.resources[n])||s.resources[n]<0||s.resources[n]>1000000)throw Error("Invalid resources");
  const cells={};
  for(const [k,t] of Object.entries(s.cells)){
@@ -106,7 +106,7 @@ function restore(raw){
  let clean={version:VERSION,cells,resources:{...s.resources},residents:s.residents,seconds:s.seconds};
  if(s.version===1)clean=community(clean);else {validateCommunity(s,cells);Object.assign(clean,{people:s.people.map(p=>({...p,trait:typeof p.trait==="string"&&p.trait?p.trait:"steady"})),arrivalIndex:s.arrivalIndex,arrival:s.arrival?{...s.arrival,people:s.arrival.people.map(p=>({...p,trait:typeof p.trait==="string"&&p.trait?p.trait:"steady"}))}:null,nextArrival:s.nextArrival});}
  if(!Number.isFinite(s.morale))clean.morale=62;else clean.morale=Math.max(0,Math.min(100,s.morale));
- clean.activities=normaliseActivities(s.activities);clean.daily=normaliseDaily(s.daily);normaliseEventState(s);clean.event=s.event;clean.eventIndex=s.eventIndex;clean.eventLog=s.eventLog;clean.chapter=normaliseChapter(s.chapter);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];clean.log=typeof s.log==="string"?s.log.slice(0,200):"";
+ clean.activities=normaliseActivities(s.activities);clean.daily=normaliseDaily(s.daily);clean.landmark=normaliseLandmark(s.landmark);normaliseEventState(s);clean.event=s.event;clean.eventIndex=s.eventIndex;clean.eventLog=s.eventLog;clean.chapter=normaliseChapter(s.chapter);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];clean.log=typeof s.log==="string"?s.log.slice(0,200):"";
  const cap=capacity(clean);if(clean.residents>cap.housing)throw Error("Insufficient housing");
  for(const n of ["food","water","power"])clean.resources[n]=Math.min(clean.resources[n],cap[n]);
  return clean;
@@ -129,6 +129,15 @@ const EVENT_DEFS=[
  {id:"radio",title:"UNMARKED RADIO BURST",body:"A short transmission repeats the Lantern Programme handshake. It may be a nearby civilian team—or a decoy.",choices:{decode:{label:"Decode the burst",cost:{power:3},result:"The signal resolves into a safe-route marker.",morale:3},archive:{label:"Archive without decoding",cost:{},result:"The fragment is stored for a better-equipped team.",morale:0}}},
  {id:"inspection",title:"SURFACE INSPECTION",body:"Fresh marks surround the hatch. Nothing has entered the shelter, but the perimeter needs attention.",choices:{watch:{label:"Send a watch team",cost:{power:2,materials:8},result:"The hatch is secure and a maintenance cache is recovered.",morale:3,reward:{materials:16}},lockdown:{label:"Lock down the entrance",cost:{},result:"The shelter goes quiet until the next shift.",morale:-1}}}
 ];
+function normaliseLandmark(l){return {discovered:Boolean(l&&l.discovered),restored:Boolean(l&&l.restored)};}
+function discoverLandmark(s){
+ s.landmark=normaliseLandmark(s.landmark);if(s.landmark.discovered)return {ok:false,message:"The Millbank platform is already mapped."};if((s.activities?.completed||0)<2||s.resources.materials<120||s.resources.power<10)return {ok:false,message:"Map two operations and reserve 120 materials + 10 power before surveying Millbank."};
+ s.resources.materials-=120;s.resources.power-=10;s.landmark.discovered=true;s.morale=Math.min(100,(s.morale??62)+6);s.lore=(s.lore||[]).concat("MILLBANK PLATFORM LOCATED · A sealed municipal rail interchange lies beneath the eastern cut.").slice(-8);s.log="Millbank platform located. The old interchange can be restored.";return {ok:true,message:s.log};
+}
+function restoreLandmark(s){
+ s.landmark=normaliseLandmark(s.landmark);if(!s.landmark.discovered)return {ok:false,message:"Survey the buried platform before restoring it."};if(s.landmark.restored)return {ok:false,message:"Millbank platform is already operational."};if(s.residents<8||s.resources.materials<180||s.resources.power<20)return {ok:false,message:"Restoration needs 8 residents, 180 materials and 20 power."};
+ s.resources.materials-=180;s.resources.power-=20;s.landmark.restored=true;s.morale=Math.min(100,(s.morale??62)+12);s.lore=(s.lore||[]).concat("MILLBANK PLATFORM RESTORED · Haven 17 can now exchange people, supplies and news with the wider basin.").slice(-8);s.log="Millbank platform restored. Haven 17 has a future beyond its walls.";return {ok:true,message:s.log};
+}
 function normaliseEventState(s){s.event=s.event&&typeof s.event==="object"&&EVENT_DEFS.some(e=>e.id===s.event.id)?s.event:null;s.eventIndex=Number.isSafeInteger(s.eventIndex)&&s.eventIndex>=0?s.eventIndex:0;s.eventLog=Array.isArray(s.eventLog)?s.eventLog.filter(v=>typeof v==="string").slice(-8):[];return s;}
 function makeEvent(index){return EVENT_DEFS[index%EVENT_DEFS.length];}
 function resolveEvent(s,choice){
@@ -185,7 +194,7 @@ function community(s){
  const starters=[["Ada","engineer","2:0","steady"],["Noor","water","4:0","observant"],["Rose","farmer","1:0","resourceful"],["Leon","doctor",null,"empathetic"]];
  for(let i=0;i<s.residents;i++){const p=person("resident-"+i,starters[i]?.[0]||"Resident "+(i+1),starters[i]?.[1]||"general");
  const job=starters[i]?.[2];p.trait=starters[i]?.[3]||"steady";if(job&&JOBS[s.cells[job]])p.job=job;s.people.push(p);}
- s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.morale=62;s.activities=freshActivities();s.daily={lastDay:null,streak:0,total:0};s.event=null;s.eventIndex=0;s.eventLog=[];s.chapter={id:"first-blackout",claimed:false};s.lore=["2043 · Greywater Basin. The Long Blackout cut the region off from the surface.","Haven 17 was built under a decommissioned rail interchange by the Lantern Programme.","The first rule of the shelter is simple: every admission is a promise the systems must keep."];s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
+ s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.morale=62;s.activities=freshActivities();s.daily={lastDay:null,streak:0,total:0};s.landmark={discovered:false,restored:false};s.event=null;s.eventIndex=0;s.eventLog=[];s.chapter={id:"first-blackout",claimed:false};s.lore=["2043 · Greywater Basin. The Long Blackout cut the region off from the surface.","Haven 17 was built under a decommissioned rail interchange by the Lantern Programme.","The first rule of the shelter is simple: every admission is a promise the systems must keep."];s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
  return s;
 }
 function worker(s,k){return s.people.find(p=>p.job===k&&!p.child&&p.health>=100);}
@@ -253,6 +262,6 @@ function validateCommunity(s,cells){
  }
 }
 
-const api={JOBS,TRAITS,ACTIVITY_DEFS,EVENT_DEFS,CHAPTER_OBJECTIVES,chapterStatus,claimChapter,activity,dailyClaim,resolveEvent,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
+const api={JOBS,TRAITS,ACTIVITY_DEFS,EVENT_DEFS,CHAPTER_OBJECTIVES,chapterStatus,claimChapter,activity,dailyClaim,resolveEvent,discoverLandmark,restoreLandmark,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.Bunker=api;
 })(typeof globalThis!=="undefined"?globalThis:this);
