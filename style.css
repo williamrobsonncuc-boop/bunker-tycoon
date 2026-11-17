@@ -260,3 +260,32 @@ button:active{transform:translateY(2px) scale(.985)}
   button,.cell,.room-scene,.room-character,.resource,.activity-card,.arrival-person{transition:none}
   .room-character,.arrival-person,.daily-drop,.landmark-card,.request-card,.room-title{animation:none}
 }
+
+/* Production polish: illustrated material layers and room activity */
+.room-scene::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  opacity:.2;
+  mix-blend-mode:multiply;
+  background:
+    radial-gradient(circle at 12% 18%,#f8e7c833 0 1px,transparent 1.7px),
+    radial-gradient(circle at 76% 62%,#33291f22 0 1px,transparent 1.6px),
+    repeating-linear-gradient(0deg,transparent 0 6px,#2e281f0c 7px 8px);
+  background-size:9px 9px,13px 13px,100% 100%;
+}
+.room-art{position:relative;z-index:1;animation:room-lamp 7s ease-in-out infinite}
+.room-scene::after{
+  content:"";
+  position:absolute;
+  inset:8% 6%;
+  z-index:3;
+  pointer-events:none;
+  border:1px solid #f0d59b55;
+  box-shadow:inset 0 0 24px #f5d99c12;
+  animation:room-flicker 8s ease-in-out infinite;
+}
+@keyframes room-lamp{0%,100%{filter:sepia(.18) saturate(.78) contrast(1.08) brightness(.98)}48%{filter:sepia(.14) saturate(.84) contrast(1.08) brightness(1.04)}52%{filter:sepia(.2) saturate(.74) contrast(1.1) brightness(.94)}}
+@keyframes room-flicker{0%,100%{opacity:.3}48%{opacity:.46}52%{opacity:.18}56%{opacity:.35}}
