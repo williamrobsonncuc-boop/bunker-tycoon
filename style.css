@@ -225,3 +225,38 @@ button,.import{
   background:#353a37F5;
   border-top-color:#222622;
 }
+
+/* Animation principles pass — motion language for Haven 17 */
+button,.cell,.room-scene,.room-character,.resource,.activity-card,.arrival-person{
+  transition:transform .22s cubic-bezier(.22,.8,.28,1),filter .22s ease,box-shadow .22s ease,opacity .22s ease;
+}
+button:active{transform:translateY(2px) scale(.985)}
+.cell.room:hover .room-scene{transform:translateY(-2px);filter:saturate(.95) brightness(1.04)}
+.cell.room:active .room-scene{animation:anticipate .22s ease-out,room-settle .36s .22s cubic-bezier(.22,.8,.28,1) both}
+.cell.selected .room-scene{box-shadow:inset 0 0 0 4px #d6aa63,inset 0 0 0 7px #3d3932,0 4px 0 #302f2a}
+.room-character{
+  transform-origin:50% 100%;
+  animation:character-idle 4.8s ease-in-out infinite;
+}
+.room-character.secondary{animation-delay:-1.8s}
+.room-character.child{animation-duration:3.6s}
+.resource{transform-origin:50% 50%}
+.resource:hover{transform:translateY(-2px) rotate(-.4deg)}
+.resource strong{display:inline-block}
+.message.action-flash{animation:message-flash .45s ease-out}
+.arrival-person{transform-origin:50% 100%;animation:arrival-enter .6s cubic-bezier(.22,.8,.28,1) both}
+.arrival-person:nth-child(2){animation-delay:.08s}.arrival-person:nth-child(3){animation-delay:.16s}.arrival-person:nth-child(4){animation-delay:.24s}
+.activity-card:hover{transform:translateY(-2px);box-shadow:0 4px 0 #9b927d}
+.daily-drop,.landmark-card,.request-card{animation:panel-reveal .38s cubic-bezier(.22,.8,.28,1) both}
+.room-title{animation:title-settle .45s ease-out both}
+@keyframes anticipate{0%{transform:scale(1)}45%{transform:scale(.975,.94)}100%{transform:scale(1.01,1.02)}}
+@keyframes room-settle{0%{transform:scale(1.01,1.02)}100%{transform:scale(1)}}
+@keyframes character-idle{0%,100%{transform:translate(0,0) rotate(0) scaleY(1)}35%{transform:translate(1px,-1px) rotate(.7deg) scaleY(1.015)}70%{transform:translate(-1px,0) rotate(-.45deg) scaleY(.99)}}
+@keyframes arrival-enter{0%{opacity:0;transform:translateY(10px) scale(.9,.82)}55%{opacity:1;transform:translateY(-2px) scale(1.03,1.06)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes title-settle{0%{opacity:0;transform:translateY(-4px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes panel-reveal{0%{opacity:0;transform:translateY(8px) scale(.985)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes message-flash{0%{transform:scale(.985);filter:brightness(1)}45%{transform:scale(1.012);filter:brightness(1.12)}100%{transform:scale(1);filter:brightness(1)}}
+@media(prefers-reduced-motion:reduce){
+  button,.cell,.room-scene,.room-character,.resource,.activity-card,.arrival-person{transition:none}
+  .room-character,.arrival-person,.daily-drop,.landmark-card,.request-card,.room-title{animation:none}
+}
