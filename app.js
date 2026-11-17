@@ -10,7 +10,7 @@ medicine:'<rect x="3" y="5" width="26" height="25" rx="5" fill="#f5debd"/><path 
 room:'<rect x="3" y="5" width="26" height="24" rx="5" fill="#cfac72"/><path d="M11 29V15H22V29" fill="#f4ddb5"/>'
 };
 let state=E.initial(),selected=null,paused=false,panel=null,returnFocus=null,peopleSignature="",saveWarning="";
-let report={net:{},status:{}};
+let report={net:{},status:{}},lastAlertCue="";
 try{const raw=localStorage.getItem(SAVE)||localStorage.getItem("bunker-tycoon:v1");if(raw)state=E.restore(raw);}
 catch(e){saveWarning="A saved shelter could not be loaded. Use Export save to keep this session if storage is unavailable.";}
 function node(tag,text=""){const el=document.createElement(tag);el.textContent=text;return el;}
@@ -220,6 +220,9 @@ $("import").onchange=async event=>{
 let visualSignature="";
 setInterval(()=>{
  if(paused||document.hidden)return;report=E.step(state);updateResources();renderCommunity();
+ const alertCue=state.event?.id||state.request?.id||"";
+ if(alertCue&&alertCue!==lastAlertCue){sound("alert");lastAlertCue=alertCue;}
+ if(!alertCue)lastAlertCue="";
  const signature=JSON.stringify(state.people.map(p=>[p.id,p.job,p.health===100]));
  if(signature!==visualSignature){visualSignature=signature;renderGrid();}
  document.querySelectorAll("[data-status]").forEach(el=>{const k=el.dataset.status;el.textContent=report.status[k]||(E.JOBS[state.cells[k]]?"Needs worker":"Ready");});
