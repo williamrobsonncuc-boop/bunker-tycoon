@@ -107,5 +107,11 @@ test("Millbank landmark rewards long-term expansion",()=>{
 test("resident requests create personal decisions",()=>{
  const s=E.initial();for(let i=0;i<240;i++)E.step(s);assert(s.request&&s.request.id==="space");const before=s.resources.materials;assert(E.resolveRequest(s,"defer").ok);assert(!s.request&&s.resources.materials===before&&s.requestLog.length===1);
 });
+test("maintenance and clinic rounds deepen operations",()=>{
+ const s=E.initial();s.resources.materials=100;s.resources.power=30;s.resources.medicine=5;
+ const maintenance=E.activity(s,"maintenance");assert(maintenance.ok&&s.activities.completed===1);
+ for(let i=0;i<75;i++)E.step(s);
+ const rounds=E.activity(s,"clinicRound");assert(rounds.ok&&s.activities.completed===2);
+});
 console.log(count+" simulation tests passed.");
 
