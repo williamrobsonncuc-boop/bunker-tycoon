@@ -186,7 +186,9 @@ const ACTIVITY_DEFS={
  radio:{name:"Long-range radio",brief:"Decode a surviving civil-defence broadcast.",cost:{power:3},cooldown:90,reward:"intel",description:"A quiet signal can reveal who is still out there.",lore:"The emergency network still repeats a three-note handshake from the old Civil Defence Authority."},
  salvage:{name:"Salvage sortie",brief:"Send a two-person team to the rail cut.",cost:{power:4,materials:10},cooldown:150,reward:"materials",description:"Recover sealed crates before the surface patrols return.",lore:"The buried Millbank platform was designed as a logistics interchange, not a shelter. Someone stocked it anyway."},
  drill:{name:"Civil defence drill",brief:"Run a timed shelter and fire-control exercise.",cost:{power:2},cooldown:120,reward:"morale",description:"Practice now, when the alarms are quiet.",lore:"Haven 17 was one of 312 municipal sites in the Lantern Programme. The paperwork survived; the chain of command did not."},
- patrol:{name:"Perimeter watch",brief:"Check the hatch, vents and drainage line.",cost:{power:5},cooldown:180,reward:"materials",description:"A watch team keeps the entrance from becoming a blind spot.",lore:"The surface is not empty. Footprints keep appearing outside the hatch after rain."}
+ patrol:{name:"Perimeter watch",brief:"Check the hatch, vents and drainage line.",cost:{power:5},cooldown:180,reward:"materials",description:"A watch team keeps the entrance from becoming a blind spot.",lore:"The surface is not empty. Footprints keep appearing outside the hatch after rain."},
+ maintenance:{name:"Systems maintenance",brief:"Keep the shelter’s oldest machinery alive.",cost:{power:2,materials:12},cooldown:75,reward:"materials",description:"A careful repair prevents small faults becoming emergencies.",lore:"The original maintenance log ends with a handwritten note: ‘If it still turns, keep it turning.’"},
+ clinicRound:{name:"Clinic rounds",brief:"Run a calm evening round through the medical bay.",cost:{power:2,medicine:1},cooldown:140,reward:"morale",description:"Routine care catches problems before they become crises.",lore:"Leon’s rounds are the closest thing Haven 17 has to a daily clock."}
 };
 function freshActivities(){return {last:{},completed:0,history:[]};}
 function normaliseActivities(a){const out=freshActivities();if(!a||typeof a!=="object")return out;if(a.last&&typeof a.last==="object")for(const [k,v] of Object.entries(a.last))if(ACTIVITY_DEFS[k]&&Number.isSafeInteger(v)&&v>=0)out.last[k]=v;out.completed=Number.isSafeInteger(a.completed)&&a.completed>=0?a.completed:0;out.history=Array.isArray(a.history)?a.history.filter(v=>typeof v==="string").slice(-8):[];return out;}
@@ -198,8 +200,8 @@ function activity(s,id){
  for(const [n,cost] of Object.entries(d.cost))s.resources[n]-=cost;
  let message="";
  if(d.reward==="intel"){s.morale=Math.min(100,s.morale+4);message="Signal decoded. A route marker was added to the civil-defence map.";}
- if(d.reward==="materials"){const gain=id==="salvage"?28:18;s.resources.materials=Math.min(1000000,s.resources.materials+gain);message=id==="salvage"?"Sortie returned with "+gain+" materials and a sealed ration manifest.":"Perimeter team recovered "+gain+" materials from a maintenance cache.";}
- if(d.reward==="morale"){s.morale=Math.min(100,s.morale+12);message="Drill complete. Response time improved; morale rises.";}
+ if(d.reward==="materials"){const gain=id==="salvage"?28:id==="maintenance"?20:18;s.resources.materials=Math.min(1000000,s.resources.materials+gain);message=id==="salvage"?"Sortie returned with "+gain+" materials and a sealed ration manifest.":id==="maintenance"?"Systems stabilised and "+gain+" reusable materials were recovered.":"Perimeter team recovered "+gain+" materials from a maintenance cache.";}
+ if(d.reward==="morale"){const gain=id==="clinicRound"?8:12;s.morale=Math.min(100,s.morale+gain);message=id==="clinicRound"?"Clinic rounds complete. Residents feel seen and morale rises.":"Drill complete. Response time improved; morale rises.";}
  s.activities.last[id]=s.seconds;s.activities.completed++;s.activities.history.push(d.name+" · "+message);s.activities.history=s.activities.history.slice(-8);s.lore=(s.lore||[]).concat(d.lore).slice(-8);s.log=message;return {ok:true,message};
 }
 function community(s){
