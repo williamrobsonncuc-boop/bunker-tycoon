@@ -17,7 +17,7 @@ function node(tag,text=""){const el=document.createElement(tag);el.textContent=t
 function icon(name,className=""){const el=document.createElementNS("http://www.w3.org/2000/svg","svg");el.setAttribute("viewBox","0 0 32 36");el.setAttribute("aria-hidden","true");el.setAttribute("focusable","false");el.setAttribute("class",className);el.setAttribute("stroke","#292b2b");el.setAttribute("stroke-width","2.5");el.setAttribute("stroke-linecap","round");el.setAttribute("stroke-linejoin","round");el.innerHTML=ICONS[name]||ICONS.room;return el;}
 function image(src,className){const img=document.createElement("img");img.src=src;img.alt="";img.className=className;img.draggable=false;return img;}
 function portrait(p,className="portrait"){return image("assets/characters/"+(p.child?"child":p.skill)+".svg",className+(p.child?" child":"")+(p.health<100?" recovering":""));}
-function message(text){$("message").textContent=text;}
+function message(text){const el=$("message");el.textContent=text;el.classList.remove("action-flash");void el.offsetWidth;el.classList.add("action-flash");setTimeout(()=>el.classList.remove("action-flash"),520);}
 function save(){try{localStorage.setItem(SAVE,JSON.stringify(state));$("save-status").textContent="Saved on this device.";}catch(e){$("save-status").textContent="Automatic saving unavailable. Export a save to keep your progress.";}}
 function estimateReport(){const copy=JSON.parse(JSON.stringify(state));report=E.step(copy);}
 function showPanel(name,focus=true){
