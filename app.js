@@ -159,7 +159,10 @@ function renderActivities(){
 }
 function renderAlerts(){
  const box=$("alerts");if(!box)return;box.replaceChildren();
- if(!state.event){box.append(node("p","No active alerts. The next scheduled civil-defence check is in "+(180-(state.seconds%180))+" active seconds."));return;}
+ if(state.request){
+ const rq=(E.REQUEST_DEFS||[]).find(x=>x.id===state.request.id);if(rq){const card=node("article");card.className="request-card";card.append(node("span","RESIDENT REQUEST"),node("h2",rq.title),node("p",rq.body));Object.entries(rq.choices).forEach(([id,c])=>{const b=node("button",c.label);b.className="primary";b.onclick=()=>act(()=>E.resolveRequest(state,id));card.append(b);});box.append(card);}
+}
+if(!state.event){if(!state.request)box.append(node("p","No active alerts. The next scheduled civil-defence check is in "+(180-(state.seconds%180))+" active seconds."));return;}
  const def=(E.EVENT_DEFS||[]).find(x=>x.id===state.event.id);if(!def)return;
  box.append(node("span","CIVIL DEFENCE ALERT"),node("h2",def.title),node("p",def.body));
  Object.entries(def.choices).forEach(([id,c])=>{const b=node("button",c.label);b.className="primary";b.onclick=()=>act(()=>E.resolveEvent(state,id));box.append(b);});
@@ -172,6 +175,7 @@ function renderHome(){
  const el=$("home-summary");if(!el)return;const cap=E.capacity(state);el.textContent="Haven 17 · "+state.residents+" people · "+cap.housing+" beds · "+Math.round(state.morale??62)+"% civil-defence status";
  const goals=$("home-objectives");if(goals){goals.replaceChildren();(E.chapterStatus?E.chapterStatus(state):[]).forEach(g=>{const row=node("p",(g.done?"✓ ":"□ ")+g.name+" — "+g.brief);row.className=g.done?"objective done":"objective";goals.append(row);});const claim=$("claim-chapter");if(claim){const status=E.chapterStatus(state),complete=status.length&&status.every(g=>g.done),claimed=state.chapter?.claimed;claim.disabled=!complete||claimed;claim.textContent=claimed?"Chapter filed":"File chapter report";}}
  const log=$("home-log");if(log)log.textContent=state.log||"Shelter systems nominal.";
+ const shift=$("shift-report");if(shift){const residents=state.residents,ops=state.activities?.completed||0,alerts=state.eventLog?.length||0,requests=state.requestLog?.length||0;shift.textContent="SHIFT REPORT · "+residents+" residents · "+ops+" operations · "+alerts+" alerts resolved · "+requests+" resident requests answered."}
  const status=E.chapterStatus?E.chapterStatus(state):[],done=status.filter(g=>g.done).length,total=status.length,progress=$("chapter-progress");if(progress){progress.value=done;progress.max=total;progress.setAttribute("aria-label",done+" of "+total+" chapter objectives complete");}
  const next=status.find(g=>!g.done),brief=$("next-brief"),nextButton=$("next-action");if(brief)brief.textContent=next?"NEXT BRIEFING · "+next.name+" — "+next.brief:(state.chapter?.claimed?"CHAPTER FILED · Awaiting the next civil-defence briefing.":"NEXT BRIEFING · File the chapter report.");if(nextButton){nextButton.textContent=next?(next.id==="reception"?"Open entrance":next.id==="operations"?"Open operations":next.id==="clinic"?"Open build":"Open community"):"View command report";nextButton.onclick=()=>showPanel(next?.id==="reception"?"entrance":next?.id==="operations"?"activities":next?.id==="clinic"?"build":"home");}
 }

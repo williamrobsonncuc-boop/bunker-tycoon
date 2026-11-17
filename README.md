@@ -109,3 +109,10 @@ The buried Millbank railway platform is now a playable long-term project. Player
 ## Responsive layout pass
 
 The layout now explicitly targets small phones, large phones, tablet portrait, tablet landscape and desktop. Safe-area padding, no-root-horizontal-overflow rules, orientation-specific map heights, tablet panel sizing and a scrollable navigation dock are included. GitHub Actions now checks 834×1112 and 1112×834 tablet viewports in addition to the existing phone and desktop runs.
+
+
+## Resident requests and shift reports
+
+Residents can now raise personal requests during active play. The player chooses whether to spend scarce supplies, power or medicine on a human need, or defer it and accept a morale consequence. Responses are recorded in the archive.
+
+The Home command screen also shows a compact shift report summarising residents, operations, resolved alerts and answered requests. This makes short return sessions legible and gives the player a reason to inspect what happened before choosing the next action.
