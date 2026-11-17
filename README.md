@@ -92,3 +92,10 @@ Haven 17 now has a first playable chapter brief, **The First Blackout**. Four ob
 Residents now carry readable personality traits such as steady, observant, resourceful, empathetic, restless and young. Traits are currently descriptive and saved as part of the community record; future balancing can give them carefully tested mechanical effects.
 
 See [the playtest and business plan](docs/PLAYTEST_AND_BUSINESS_PLAN.md) for the proposed validation sequence, fair monetisation model, brand direction and release gates.
+
+
+## Quality pass: alerts and feedback
+
+The first chapter now generates deliberate civil-defence alerts during active play. Ventilation faults, uncertain radio bursts and surface inspections pause for a player response with visible costs and consequences. Choices are written into the archive rather than resolved invisibly.
+
+Successful and failed actions also receive restrained audio feedback through the browser's local audio context. The system is intentionally subtle and respects the reduced-motion setting; final authored sound assets remain a production milestone.

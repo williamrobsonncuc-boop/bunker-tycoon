@@ -22,12 +22,13 @@ function save(){try{localStorage.setItem(SAVE,JSON.stringify(state));$("save-sta
 function estimateReport(){const copy=JSON.parse(JSON.stringify(state));report=E.step(copy);}
 function showPanel(name,focus=true){
  panel=name;returnFocus=document.activeElement;$("controls").hidden=false;document.querySelector(".layout").classList.add("panel-visible");
- const labels={home:"HAVEN 17 COMMAND",build:"BUILD & MANAGE",people:"YOUR COMMUNITY",entrance:"SURFACE ACCESS",activities:"OPERATIONS & ARCHIVE",supplies:"SHELTER SUPPLIES",settings:"SETTINGS"};
+ const labels={home:"HAVEN 17 COMMAND",build:"BUILD & MANAGE",people:"YOUR COMMUNITY",entrance:"SURFACE ACCESS",activities:"OPERATIONS & ARCHIVE",alerts:"ACTIVE ALERTS",supplies:"SHELTER SUPPLIES",settings:"SETTINGS"};
  $("panel-name").textContent=labels[name];
  document.querySelectorAll("[data-panel]").forEach(el=>el.hidden=el.dataset.panel!==name);
  document.querySelectorAll("[data-open]").forEach(b=>{b.setAttribute("aria-expanded",String(b.dataset.open===name));b.setAttribute("aria-controls","controls");});
  if(name==="people"||name==="entrance")renderCommunity();
  if(name==="activities")renderActivities();
+ if(name==="alerts")renderAlerts();
  if(name==="home")renderHome();
  if(name==="settings")renderSettings();
  if(focus)document.querySelector('[data-panel="'+name+'"] h2').focus();
@@ -48,7 +49,7 @@ function updateResources(){
  $("population").textContent=state.residents+" residents · "+cap.housing+" beds";
  $("shelter-summary").textContent=state.residents+" people · "+cap.housing+" beds · "+(paused?"Paused":"Shelter active");
  const morale=$("morale");if(morale){const m=Math.round(state.morale??62);morale.textContent="CIVIL DEFENCE STATUS · "+(m>=75?"SECURE":m>=45?"STABLE":"STRAINED")+" · "+m+"%";morale.dataset.level=m>=75?"secure":m>=45?"stable":"strained";}
- $("arrival-dot").hidden=!state.arrival;
+ $("arrival-dot").hidden=!state.arrival;$("alert-dot").hidden=!state.event;
 }
 function roomResidents(k,t){
  const worker=state.people.find(p=>p.job===k&&!p.child&&p.health===100);
@@ -153,6 +154,17 @@ function renderActivities(){
  (state.lore||[]).slice().reverse().forEach(line=>archive.append(node("p",line)));
  box.append(archive);
 }
+function renderAlerts(){
+ const box=$("alerts");if(!box)return;box.replaceChildren();
+ if(!state.event){box.append(node("p","No active alerts. The next scheduled civil-defence check is in "+(180-(state.seconds%180))+" active seconds."));return;}
+ const def=(E.EVENT_DEFS||[]).find(x=>x.id===state.event.id);if(!def)return;
+ box.append(node("span","CIVIL DEFENCE ALERT"),node("h2",def.title),node("p",def.body));
+ Object.entries(def.choices).forEach(([id,c])=>{const b=node("button",c.label);b.className="primary";b.onclick=()=>act(()=>E.resolveEvent(state,id));box.append(b);});
+ if(state.eventLog?.length){const h=node("h3","Recent decisions");box.append(h);state.eventLog.slice().reverse().forEach(x=>box.append(node("p",x)));}
+}
+function sound(kind){
+ try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const ctx=new C(),o=ctx.createOscillator(),g=ctx.createGain();o.type="triangle";o.frequency.value=kind?520:180;g.gain.setValueAtTime(.035,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.12);o.connect(g).connect(ctx.destination);o.start();o.stop(ctx.currentTime+.12);}catch(e){}
+}
 function renderHome(){
  const el=$("home-summary");if(!el)return;const cap=E.capacity(state);el.textContent="Haven 17 · "+state.residents+" people · "+cap.housing+" beds · "+Math.round(state.morale??62)+"% civil-defence status";
  const goals=$("home-objectives");if(goals){goals.replaceChildren();(E.chapterStatus?E.chapterStatus(state):[]).forEach(g=>{const row=node("p",(g.done?"✓ ":"□ ")+g.name+" — "+g.brief);row.className=g.done?"objective done":"objective";goals.append(row);});const claim=$("claim-chapter");if(claim){const status=E.chapterStatus(state),complete=status.length&&status.every(g=>g.done),claimed=state.chapter?.claimed;claim.disabled=!complete||claimed;claim.textContent=claimed?"Chapter filed":"File chapter report";}}
@@ -164,8 +176,8 @@ function renderSettings(){
  const r=$("toggle-motion"),c=$("toggle-contrast");if(r)r.setAttribute("aria-pressed",String(reduce));if(c)c.setAttribute("aria-pressed",String(contrast));
 }
 function todayDay(){return Math.floor(Date.now()/86400000);}
-function render(){updateResources();renderGrid();renderPanel();renderCommunity();if(panel==="activities")renderActivities();if(panel==="home")renderHome();if(panel==="settings")renderSettings();}
-function act(fn){const r=fn();message(r.message);if(r.ok!==false)save();estimateReport();render();}
+function render(){updateResources();renderGrid();renderPanel();renderCommunity();if(panel==="activities")renderActivities();if(panel==="home")renderHome();if(panel==="settings")renderSettings();if(panel==="alerts")renderAlerts();}
+function act(fn){const r=fn();message(r.message);if(r.ok!==false){save();sound(true);}else sound(false);estimateReport();render();}
 function centerShaft(){const tile=document.querySelector('[data-cell="3:0"]');if(tile)$("map-scroll").scrollLeft=Math.max(0,tile.offsetLeft-$("grid").offsetLeft+tile.offsetWidth/2-$("map-scroll").clientWidth/2);}
 $("center").onclick=centerShaft;
 $("zoom").onclick=()=>{const on=document.body.classList.toggle("overview");$("zoom").textContent=on?"Room detail":"Overview";$("zoom").setAttribute("aria-pressed",String(on));requestAnimationFrame(centerShaft);};

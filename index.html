@@ -31,6 +31,7 @@
 <section data-panel="people" hidden><h2 tabindex="-1">Your community</h2><p id="population"></p><p class="hint">Each facility needs a healthy adult. Matching skills add 25% output; clinics require a doctor.</p><div id="people"></div></section>
 <section data-panel="entrance" hidden><h2 tabindex="-1">At the entrance</h2><div id="arrival"></div><div id="decision-buttons"><button data-choice="admit" class="primary">Admit the whole group</button><button data-choice="temporary">Temporary shelter · 180 seconds</button><button data-choice="supplies">Provide supplies</button><button data-choice="decline">Turn the group away</button></div><p id="community-log" class="hint"></p></section>
 <section data-panel="settings" hidden><h2 tabindex="-1">Settings</h2><p class="hint">Make Haven 17 comfortable to read and play on your device.</p><button id="toggle-motion" aria-pressed="false">Reduced motion</button><button id="toggle-contrast" aria-pressed="false">High contrast interface</button><p class="hint">Your save remains on this device. Export a copy from Supplies before changing phones or browsers.</p></section>
+<section data-panel="alerts" hidden><h2 tabindex="-1">Active alerts</h2><div id="alerts"></div></section>
 <section data-panel="activities" hidden><h2 tabindex="-1">Operations &amp; archive</h2><div id="activities"></div></section>
 <section data-panel="supplies" hidden><h2 tabindex="-1">Supplies &amp; saves</h2><button id="medicine">Relief exchange · 20 materials → 5 medicine</button><button id="salvage">Recover supplies · +25 materials</button><p class="hint">Recovery is unlimited in this prototype. Simulation pauses when the app is hidden.</p><p id="save-status" class="hint"></p><button id="export">Export save</button><label class="import">Import save<input id="import" type="file" accept=".json,application/json"></label></section>
 </aside>
@@ -39,6 +40,6 @@
 <p class="footnote">World War 3 · Civilian shelter · Prototype</p>
 </main>
 <nav class="dock" aria-label="Shelter navigation"><button data-open="home">Home</button>
-<button data-open="build" id="build-button" class="primary">Build</button><button data-open="people">People</button><button data-open="entrance">Entrance<span id="arrival-dot" class="dot" hidden aria-label="Group waiting"></span></button><button data-open="activities">Operations</button><button data-open="supplies">Supplies</button><button data-open="settings">Settings</button>
+<button data-open="build" id="build-button" class="primary">Build</button><button data-open="people">People</button><button data-open="entrance">Entrance<span id="arrival-dot" class="dot" hidden aria-label="Group waiting"></span></button><button data-open="alerts">Alerts<span id="alert-dot" class="dot" hidden aria-label="Active alert"></span></button><button data-open="activities">Operations</button><button data-open="supplies">Supplies</button><button data-open="settings">Settings</button>
 </nav>
 </body></html>

@@ -83,6 +83,7 @@ function step(s){
  const leaving=s.people.filter(p=>p.until!==null&&p.until<=s.seconds);
  if(leaving.length){s.people=s.people.filter(p=>!leaving.includes(p));s.log="Temporary guests continued to the civilian evacuation point.";s.residents=s.people.length;}
  if(!s.arrival&&s.seconds>=s.nextArrival)s.arrival=makeArrival(s.arrivalIndex);
+ if(!s.event&&s.seconds>0&&s.seconds%180===0)s.event=makeEvent(s.eventIndex);
  return {status,production,net:Object.fromEntries(Object.keys(r).map(k=>[k,r[k]-before[k]])),shortage:r.food===0||r.water===0};
 }
 function restore(raw){
@@ -105,7 +106,7 @@ function restore(raw){
  let clean={version:VERSION,cells,resources:{...s.resources},residents:s.residents,seconds:s.seconds};
  if(s.version===1)clean=community(clean);else {validateCommunity(s,cells);Object.assign(clean,{people:s.people.map(p=>({...p,trait:typeof p.trait==="string"&&p.trait?p.trait:"steady"})),arrivalIndex:s.arrivalIndex,arrival:s.arrival?{...s.arrival,people:s.arrival.people.map(p=>({...p,trait:typeof p.trait==="string"&&p.trait?p.trait:"steady"}))}:null,nextArrival:s.nextArrival});}
  if(!Number.isFinite(s.morale))clean.morale=62;else clean.morale=Math.max(0,Math.min(100,s.morale));
- clean.activities=normaliseActivities(s.activities);clean.daily=normaliseDaily(s.daily);clean.chapter=normaliseChapter(s.chapter);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];clean.log=typeof s.log==="string"?s.log.slice(0,200):"";
+ clean.activities=normaliseActivities(s.activities);clean.daily=normaliseDaily(s.daily);normaliseEventState(s);clean.event=s.event;clean.eventIndex=s.eventIndex;clean.eventLog=s.eventLog;clean.chapter=normaliseChapter(s.chapter);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];clean.log=typeof s.log==="string"?s.log.slice(0,200):"";
  const cap=capacity(clean);if(clean.residents>cap.housing)throw Error("Insufficient housing");
  for(const n of ["food","water","power"])clean.resources[n]=Math.min(clean.resources[n],cap[n]);
  return clean;
@@ -122,6 +123,20 @@ function makeArrival(index){
  {name:"Evacuated neighbours",story:"Three neighbours reached your entrance after their district lost power.",people:[person("a","Jo","general",80,false,"restless"),person("b","Ren","farmer",100,false,"resourceful"),person("c","Alex","engineer",100,false,"observant")]}
  ];
  const g=groups[index%groups.length];return {name:g.name,story:g.story,people:g.people.map(p=>({...p,id:"arrival-"+index+"-"+p.id}))};
+}
+const EVENT_DEFS=[
+ {id:"ventilation",title:"VENTILATION FAULT",body:"A pressure alarm is flickering in the east service duct. The air is still safe, but the filter room is losing efficiency.",choices:{repair:{label:"Repair immediately",cost:{materials:20,power:2},result:"The filter bank is stabilised. The shelter breathes easier.",morale:4},defer:{label:"Defer for now",cost:{},result:"The alarm is logged for the next maintenance window.",morale:-4}}},
+ {id:"radio",title:"UNMARKED RADIO BURST",body:"A short transmission repeats the Lantern Programme handshake. It may be a nearby civilian team—or a decoy.",choices:{decode:{label:"Decode the burst",cost:{power:3},result:"The signal resolves into a safe-route marker.",morale:3},archive:{label:"Archive without decoding",cost:{},result:"The fragment is stored for a better-equipped team.",morale:0}}},
+ {id:"inspection",title:"SURFACE INSPECTION",body:"Fresh marks surround the hatch. Nothing has entered the shelter, but the perimeter needs attention.",choices:{watch:{label:"Send a watch team",cost:{power:2,materials:8},result:"The hatch is secure and a maintenance cache is recovered.",morale:3,reward:{materials:16}},lockdown:{label:"Lock down the entrance",cost:{},result:"The shelter goes quiet until the next shift.",morale:-1}}}
+];
+function normaliseEventState(s){s.event=s.event&&typeof s.event==="object"&&EVENT_DEFS.some(e=>e.id===s.event.id)?s.event:null;s.eventIndex=Number.isSafeInteger(s.eventIndex)&&s.eventIndex>=0?s.eventIndex:0;s.eventLog=Array.isArray(s.eventLog)?s.eventLog.filter(v=>typeof v==="string").slice(-8):[];return s;}
+function makeEvent(index){return EVENT_DEFS[index%EVENT_DEFS.length];}
+function resolveEvent(s,choice){
+ normaliseEventState(s);if(!s.event)return {ok:false,message:"There is no active alert."};const def=EVENT_DEFS.find(e=>e.id===s.event.id),pick=def?.choices?.[choice];if(!pick)return {ok:false,message:"Unknown response."};
+ for(const [n,cost] of Object.entries(pick.cost))if((s.resources[n]||0)<cost)return {ok:false,message:"Response needs "+cost+" "+n+"."};
+ for(const [n,cost] of Object.entries(pick.cost))s.resources[n]-=cost;
+ if(pick.reward)for(const [n,gain] of Object.entries(pick.reward))s.resources[n]=Math.min(1000000,s.resources[n]+gain);
+ s.morale=Math.max(0,Math.min(100,(s.morale??62)+(pick.morale||0)));s.eventLog.push(def.title+" · "+pick.result);s.eventLog=s.eventLog.slice(-8);s.lore=(s.lore||[]).concat(def.title+" · "+pick.result).slice(-8);s.event=null;s.eventIndex++;s.log=pick.result;return {ok:true,message:pick.result};
 }
 const CHAPTER_OBJECTIVES=[
  {id:"reception",name:"Open the doors",brief:"Make the first admission decision.",done:s=>s.arrivalIndex>=1},
@@ -170,7 +185,7 @@ function community(s){
  const starters=[["Ada","engineer","2:0","steady"],["Noor","water","4:0","observant"],["Rose","farmer","1:0","resourceful"],["Leon","doctor",null,"empathetic"]];
  for(let i=0;i<s.residents;i++){const p=person("resident-"+i,starters[i]?.[0]||"Resident "+(i+1),starters[i]?.[1]||"general");
  const job=starters[i]?.[2];p.trait=starters[i]?.[3]||"steady";if(job&&JOBS[s.cells[job]])p.job=job;s.people.push(p);}
- s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.morale=62;s.activities=freshActivities();s.daily={lastDay:null,streak:0,total:0};s.chapter={id:"first-blackout",claimed:false};s.lore=["2043 · Greywater Basin. The Long Blackout cut the region off from the surface.","Haven 17 was built under a decommissioned rail interchange by the Lantern Programme.","The first rule of the shelter is simple: every admission is a promise the systems must keep."];s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
+ s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.morale=62;s.activities=freshActivities();s.daily={lastDay:null,streak:0,total:0};s.event=null;s.eventIndex=0;s.eventLog=[];s.chapter={id:"first-blackout",claimed:false};s.lore=["2043 · Greywater Basin. The Long Blackout cut the region off from the surface.","Haven 17 was built under a decommissioned rail interchange by the Lantern Programme.","The first rule of the shelter is simple: every admission is a promise the systems must keep."];s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
  return s;
 }
 function worker(s,k){return s.people.find(p=>p.job===k&&!p.child&&p.health>=100);}
@@ -238,6 +253,6 @@ function validateCommunity(s,cells){
  }
 }
 
-const api={JOBS,TRAITS,ACTIVITY_DEFS,CHAPTER_OBJECTIVES,chapterStatus,claimChapter,activity,dailyClaim,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
+const api={JOBS,TRAITS,ACTIVITY_DEFS,EVENT_DEFS,CHAPTER_OBJECTIVES,chapterStatus,claimChapter,activity,dailyClaim,resolveEvent,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.Bunker=api;
 })(typeof globalThis!=="undefined"?globalThis:this);

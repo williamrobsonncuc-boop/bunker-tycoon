@@ -98,5 +98,8 @@ test("daily supply drops are once per day and persist streaks",()=>{
 test("chapter objectives and resident traits are persistent",()=>{
  const s=E.initial();assert(s.people[0].trait==="steady"&&s.people[2].trait==="resourceful");assert(E.chapterStatus(s).filter(g=>g.done).length===0);const r=E.restore(JSON.stringify(s));assert(r.people[1].trait==="observant"&&r.chapter.id==="first-blackout");
 });
+test("alerts pause for a deliberate response",()=>{
+ const s=E.initial();for(let i=0;i<180;i++)E.step(s);assert(s.event&&s.event.id==="ventilation");const before=s.resources.materials;assert(E.resolveEvent(s,"defer").ok);assert(!s.event&&s.eventLog.length===1&&s.resources.materials===before);
+});
 console.log(count+" simulation tests passed.");
 
