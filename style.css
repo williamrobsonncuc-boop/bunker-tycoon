@@ -75,3 +75,153 @@ html,body{overflow-x:hidden}img{max-width:100%}.scroll{touch-action:pan-x pan-y}
 @media(min-width:1000px){.world{min-height:clamp(500px,70svh,780px)}.scroll{max-height:68svh}}
 
 .shift-report{font:700 10px ui-monospace,Consolas,monospace;letter-spacing:.4px;color:#637072;border-top:1px solid #c1b9a4;padding-top:8px}.request-card{border:2px solid #9b865c;background:#f1eadb;padding:13px 14px;margin-bottom:12px}.request-card>span{font:800 10px ui-monospace,Consolas,monospace;letter-spacing:1px;color:#6e7b76}.request-card h2{font-family:ui-monospace,Consolas,monospace;font-size:18px}.request-card button{width:100%;margin:6px 0}
+
+/* Underhaven art direction pass — illustrated government field manual */
+:root{
+  --ink:#2a2925;
+  --cream:#f0e6d3;
+  --earth:#4a463d;
+  --paper:#d9c6a8;
+  --paper-light:#efe3cf;
+  --olive:#697457;
+  --slate:#59656a;
+  --rust:#9a5d43;
+  --ochre:#b88947;
+}
+body{
+  background:
+    radial-gradient(circle at 15% 12%,#fff8e522 0 1px,transparent 2px),
+    radial-gradient(circle at 70% 38%,#2d211b18 0 1px,transparent 2px),
+    linear-gradient(135deg,#b8a98f,#d6c7ad 45%,#ad9d83);
+  background-size:7px 7px,11px 11px,100% 100%;
+  color:var(--ink);
+  font-family:Georgia,"Times New Roman",serif;
+}
+.topbar{
+  background:linear-gradient(180deg,#3f4846,#2c3434);
+  border-bottom:4px solid #252723;
+  box-shadow:0 4px 0 #6c5a43, inset 0 -1px #8f8068;
+}
+.brand span{
+  font-family:Georgia,"Times New Roman",serif;
+  letter-spacing:3px;
+  color:#efe1c9;
+  text-shadow:1px 1px #151817;
+}
+.brand small{
+  font-family:ui-monospace,Consolas,monospace;
+  color:#c5b99f;
+  letter-spacing:1.5px;
+}
+.resource{
+  background:linear-gradient(145deg,#f4ead8,#d9c7aa);
+  border-color:#3b3933;
+  border-radius:4px;
+  box-shadow:inset 0 0 0 1px #fff4dc,0 3px 0 #645542;
+}
+.resource strong,.resource small,.resource em{font-family:Georgia,"Times New Roman",serif}
+.world{
+  background:#504b42;
+  border-color:#2b2b27;
+  border-radius:5px;
+  box-shadow:0 8px 0 #655844, inset 0 0 0 2px #aa9677;
+}
+.surface{
+  background:#b7a88d;
+  border-bottom:3px solid #393a35;
+}
+.surface img{filter:sepia(.22) saturate(.72) contrast(1.05)}
+.surface-caption{
+  border-radius:2px;
+  background:#302f2aDD;
+  border:1px solid #b7a27f;
+  font-family:Georgia,"Times New Roman",serif;
+  letter-spacing:.5px;
+}
+.map-help{background:#45473f;color:#e8dcc5;font-family:ui-monospace,Consolas,monospace}
+.scroll{
+  background-color:#5b554a;
+  background-image:
+    radial-gradient(ellipse at 8px 18px,#3e382f 0 5px,transparent 6px),
+    radial-gradient(ellipse at 50px 54px,#756650 0 7px,transparent 8px);
+}
+.room-scene{
+  border-radius:3px;
+  background:var(--tint,#bba789);
+  box-shadow:inset 0 0 0 4px #87765d, inset 0 0 0 7px #3d3932, 0 3px 0 #302f2a;
+}
+.room-art{
+  filter:sepia(.18) saturate(.78) contrast(1.08) brightness(.98);
+  mix-blend-mode:multiply;
+}
+.room-title{
+  top:-2px;
+  border-radius:2px;
+  border-color:#383831;
+  background:linear-gradient(#f1e4ce,#d8c2a0);
+  box-shadow:0 2px 0 #594c3d;
+  font-family:Georgia,"Times New Roman",serif;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.cell b{
+  border-radius:2px;
+  background:#3d3a33DD;
+  border-color:#272824;
+  font-family:ui-monospace,Consolas,monospace;
+  color:#efe2c8;
+}
+.room-character{
+  filter:sepia(.14) saturate(.78) contrast(1.05) drop-shadow(1px 2px 0 #30271f66);
+}
+.cell.rock,.cell.empty{
+  border-radius:3px;
+  border-color:#36342e;
+  background:#3e4947;
+  box-shadow:inset 0 0 0 4px #947a57, inset 0 0 0 7px #2e302d;
+}
+.world footer{
+  background:#454238;
+  color:#e9ddc6;
+  font-family:ui-monospace,Consolas,monospace;
+}
+aside{
+  background:#eee1ca;
+  border-radius:4px;
+  border-color:#3c3a34;
+  box-shadow:0 7px 0 #635441;
+}
+.panel-header{background:#d0bc9b;border-bottom-color:#554a3d}
+.home-hero{
+  background:
+    linear-gradient(135deg,#303a3aE8,#586052E8),
+    radial-gradient(circle,#d6b87322 0 1px,transparent 2px);
+  border-color:#2d302d;
+}
+.home-hero h2,.home-kicker,.home-brief strong,
+#alerts h2,.request-card h2{
+  font-family:Georgia,"Times New Roman",serif;
+  letter-spacing:2px;
+}
+button,.import{
+  border-radius:3px;
+  background:linear-gradient(#f2e6d1,#d8c5a5);
+  font-family:Georgia,"Times New Roman",serif;
+  box-shadow:0 3px 0 #665540;
+}
+.primary{
+  background:linear-gradient(#d6aa63,#a8753c);
+  color:#211f1b;
+  box-shadow:inset 0 2px #efd49f,0 4px 0 #523824;
+}
+.message{
+  border-radius:3px;
+  background:#3c4039;
+  color:#f1e2c7;
+  border-color:#b18f5d;
+  font-family:Georgia,"Times New Roman",serif;
+}
+.dock{
+  background:#353a37F5;
+  border-top-color:#222622;
+}
