@@ -103,9 +103,9 @@ function restore(raw){
  }}
  if(seen.size!==Object.keys(cells).length)throw Error("Disconnected chambers");
  let clean={version:VERSION,cells,resources:{...s.resources},residents:s.residents,seconds:s.seconds};
- if(s.version===1)clean=community(clean);else {validateCommunity(s,cells);Object.assign(clean,{people:s.people,arrivalIndex:s.arrivalIndex,arrival:s.arrival,nextArrival:s.nextArrival,log:typeof s.log==="string"?s.log.slice(0,200):""});}
+ if(s.version===1)clean=community(clean);else {validateCommunity(s,cells);Object.assign(clean,{people:s.people,arrivalIndex:s.arrivalIndex,arrival:s.arrival,nextArrival:s.nextArrival});}
  if(!Number.isFinite(s.morale))clean.morale=62;else clean.morale=Math.max(0,Math.min(100,s.morale));
- clean.activities=normaliseActivities(s.activities);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];
+ clean.activities=normaliseActivities(s.activities);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];clean.log=typeof s.log==="string"?s.log.slice(0,200):"";
  const cap=capacity(clean);if(clean.residents>cap.housing)throw Error("Insufficient housing");
  for(const n of ["food","water","power"])clean.resources[n]=Math.min(clean.resources[n],cap[n]);
  return clean;

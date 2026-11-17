@@ -80,7 +80,7 @@ test("forecasts leave state untouched and predict stock levels",()=>{
 });
 test("version one saves migrate without losing buildings or supplies",()=>{
  const s=E.initial();const legacy={version:1,cells:s.cells,resources:{materials:123,food:70,water:60,power:30},residents:4,seconds:42};
- const r=E.restore(JSON.stringify(legacy));assert(r.version===2&&r.people.length===4&&r.resources.materials===123&&r.seconds===42);
+ const r=E.restore(JSON.stringify(legacy));assert(r.version===3&&r.people.length===4&&r.resources.materials===123&&r.seconds===42&&r.activities.completed===0);
 });
 test("tampered people and assignments are rejected",()=>{
  const s=E.initial();s.people[1].id=s.people[0].id;rejects(()=>E.restore(JSON.stringify(s)));
