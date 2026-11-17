@@ -80,7 +80,7 @@ test("forecasts leave state untouched and predict stock levels",()=>{
 });
 test("version one saves migrate without losing buildings or supplies",()=>{
  const s=E.initial();const legacy={version:1,cells:s.cells,resources:{materials:123,food:70,water:60,power:30},residents:4,seconds:42};
- const r=E.restore(JSON.stringify(legacy));assert(r.version===4&&r.people.length===4&&r.resources.materials===123&&r.seconds===42&&r.activities.completed===0&&r.daily.total===0);
+ const r=E.restore(JSON.stringify(legacy));assert(r.version===5&&r.people.length===4&&r.resources.materials===123&&r.seconds===42&&r.activities.completed===0&&r.daily.total===0&&r.chapter.claimed===false);
 });
 test("tampered people and assignments are rejected",()=>{
  const s=E.initial();s.people[1].id=s.people[0].id;rejects(()=>E.restore(JSON.stringify(s)));
@@ -94,6 +94,9 @@ test("medical forecasts never heal the actual waiting group",()=>{
 });
 test("daily supply drops are once per day and persist streaks",()=>{
  const s=E.initial();const first=E.dailyClaim(s,20000);assert(first.ok&&s.daily.total===1&&s.daily.streak===1);assert(!E.dailyClaim(s,20000).ok);const second=E.dailyClaim(s,20001);assert(second.ok&&s.daily.streak===2&&s.daily.total===2);assert(s.resources.food<=E.capacity(s).food);
+});
+test("chapter objectives and resident traits are persistent",()=>{
+ const s=E.initial();assert(s.people[0].trait==="steady"&&s.people[2].trait==="resourceful");assert(E.chapterStatus(s).filter(g=>g.done).length===0);const r=E.restore(JSON.stringify(s));assert(r.people[1].trait==="observant"&&r.chapter.id==="first-blackout");
 });
 console.log(count+" simulation tests passed.");
 

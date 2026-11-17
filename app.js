@@ -106,7 +106,7 @@ function renderCommunity(){
  const box=$("arrival");box.replaceChildren();const f=E.forecast(state);
  if(f){
  box.append(node("strong",state.arrival.name),node("p",state.arrival.story));
- state.arrival.people.forEach(p=>{const row=node("div");row.className="arrival-person";row.append(portrait(p),node("p",p.name+" · "+(p.child?"Child":p.skill)+" · "+(p.health<100?"Needs care ("+Math.floor(p.health)+"%)":"Healthy")));box.append(row);});
+ state.arrival.people.forEach(p=>{const row=node("div");row.className="arrival-person";row.append(portrait(p),node("p",p.name+" · "+(p.child?"Child":p.skill)+" · "+(p.trait||"steady")+" · "+(p.health<100?"Needs care ("+Math.floor(p.health)+"%)":"Healthy")));box.append(row);});
  box.append(node("p","After admission: "+f.beds+"/"+f.capacity+" beds · "+f.patients+" patients / "+f.medical+" staffed clinic places."));
  box.append(node("p","Settling supplies: "+f.foodCost+" food + "+f.waterCost+" water. Ongoing demand: +"+f.extraDemand.toFixed(2)+" of each per second."));
  box.append(node("p","Stocks after 60 seconds: about "+Math.floor(f.foodAfter)+" food / "+Math.floor(f.waterAfter)+" water, with current staffing and no further construction."));
@@ -120,7 +120,7 @@ function renderCommunity(){
  if(signature!==peopleSignature){
  peopleSignature=signature;$("people").replaceChildren();
  for(const p of state.people){
- const card=node("div");card.className="person";card.append(portrait(p),node("strong",p.name+" · "+(p.child?"Child":p.skill)));
+ const card=node("div");card.className="person";card.append(portrait(p),node("strong",p.name+" · "+(p.child?"Child":p.skill)+" · "+(p.trait||"steady")));
  const health=node("p");health.dataset.person=p.id;card.append(health);
  const label=node("label","Assignment");label.className="hint";const select=document.createElement("select");select.setAttribute("aria-label","Assignment for "+p.name);
  select.append(new Option("Rest / unassigned",""));
@@ -155,6 +155,7 @@ function renderActivities(){
 }
 function renderHome(){
  const el=$("home-summary");if(!el)return;const cap=E.capacity(state);el.textContent="Haven 17 · "+state.residents+" people · "+cap.housing+" beds · "+Math.round(state.morale??62)+"% civil-defence status";
+ const goals=$("home-objectives");if(goals){goals.replaceChildren();(E.chapterStatus?E.chapterStatus(state):[]).forEach(g=>{const row=node("p",(g.done?"✓ ":"□ ")+g.name+" — "+g.brief);row.className=g.done?"objective done":"objective";goals.append(row);});const claim=$("claim-chapter");if(claim){const status=E.chapterStatus(state),complete=status.length&&status.every(g=>g.done),claimed=state.chapter?.claimed;claim.disabled=!complete||claimed;claim.textContent=claimed?"Chapter filed":"File chapter report";}}
  const log=$("home-log");if(log)log.textContent=state.log||"Shelter systems nominal.";
 }
 function renderSettings(){
@@ -169,6 +170,7 @@ function centerShaft(){const tile=document.querySelector('[data-cell="3:0"]');if
 $("center").onclick=centerShaft;
 $("zoom").onclick=()=>{const on=document.body.classList.toggle("overview");$("zoom").textContent=on?"Room detail":"Overview";$("zoom").setAttribute("aria-pressed",String(on));requestAnimationFrame(centerShaft);};
 $("close-panel").onclick=closePanel;$("toggle-motion")?.addEventListener("click",()=>{const on=localStorage.getItem("bunker-tycoon:reduce-motion")==="1";localStorage.setItem("bunker-tycoon:reduce-motion",on?"0":"1");renderSettings();});
+$("claim-chapter")?.addEventListener("click",()=>act(()=>E.claimChapter(state)));
 $("toggle-contrast")?.addEventListener("click",()=>{const on=localStorage.getItem("bunker-tycoon:high-contrast")==="1";localStorage.setItem("bunker-tycoon:high-contrast",on?"0":"1");renderSettings();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&panel)closePanel();});
 document.querySelectorAll("[data-open]").forEach(b=>{b.setAttribute("aria-expanded","false");b.setAttribute("aria-controls","controls");b.onclick=()=>{if(panel===b.dataset.open)closePanel();else showPanel(b.dataset.open);};});

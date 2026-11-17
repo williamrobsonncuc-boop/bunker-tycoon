@@ -1,6 +1,6 @@
 "use strict";
 (function(root) {
-const WIDTH=7, DEPTH=8, VERSION=4;
+const WIDTH=7, DEPTH=8, VERSION=5;
 const ROOMS={
   generator:{name:"Generator",icon:"⚡",cost:90,color:"#d3a544",description:"Produces 6 power/s.",power:6},
   pump:{name:"Water treatment",icon:"💧",cost:80,color:"#59aac4",description:"Uses 1 power/s to make 2 water/s."},
@@ -87,7 +87,7 @@ function step(s){
 }
 function restore(raw){
  const s=JSON.parse(raw);
- if(!s||![1,2,3,VERSION].includes(s.version)||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
+ if(!s||![1,2,3,4,VERSION].includes(s.version)||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
  for(const n of ["materials","food","water","power"])if(!Number.isFinite(s.resources[n])||s.resources[n]<0||s.resources[n]>1000000)throw Error("Invalid resources");
  const cells={};
  for(const [k,t] of Object.entries(s.cells)){
@@ -103,24 +103,37 @@ function restore(raw){
  }}
  if(seen.size!==Object.keys(cells).length)throw Error("Disconnected chambers");
  let clean={version:VERSION,cells,resources:{...s.resources},residents:s.residents,seconds:s.seconds};
- if(s.version===1)clean=community(clean);else {validateCommunity(s,cells);Object.assign(clean,{people:s.people,arrivalIndex:s.arrivalIndex,arrival:s.arrival,nextArrival:s.nextArrival});}
+ if(s.version===1)clean=community(clean);else {validateCommunity(s,cells);Object.assign(clean,{people:s.people.map(p=>({...p,trait:typeof p.trait==="string"&&p.trait?p.trait:"steady"})),arrivalIndex:s.arrivalIndex,arrival:s.arrival?{...s.arrival,people:s.arrival.people.map(p=>({...p,trait:typeof p.trait==="string"&&p.trait?p.trait:"steady"}))}:null,nextArrival:s.nextArrival});}
  if(!Number.isFinite(s.morale))clean.morale=62;else clean.morale=Math.max(0,Math.min(100,s.morale));
- clean.activities=normaliseActivities(s.activities);clean.daily=normaliseDaily(s.daily);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];clean.log=typeof s.log==="string"?s.log.slice(0,200):"";
+ clean.activities=normaliseActivities(s.activities);clean.daily=normaliseDaily(s.daily);clean.chapter=normaliseChapter(s.chapter);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];clean.log=typeof s.log==="string"?s.log.slice(0,200):"";
  const cap=capacity(clean);if(clean.residents>cap.housing)throw Error("Insufficient housing");
  for(const n of ["food","water","power"])clean.resources[n]=Math.min(clean.resources[n],cap[n]);
  return clean;
 }
 
 const JOBS={generator:"engineer",pump:"water",farm:"farmer",workshop:"engineer",clinic:"doctor"};
+const TRAITS=["steady","resourceful","empathetic","observant","restless","young"];
 const SKILLS=["engineer","water","farmer","doctor","general"];
-function person(id,name,skill,health=100,child=false){return {id,name,skill,health,child,job:null,until:null};}
+function person(id,name,skill,health=100,child=false,trait="steady"){return {id,name,skill,health,child,trait,job:null,until:null};}
 function makeArrival(index){
  const groups=[
- {name:"The Vale family",story:"A family displaced by fighting needs shelter together.",people:[person("a","Mara","farmer"),person("b","Eli","engineer",60),person("c","Kit","general",100,true)]},
- {name:"Civilian medical team",story:"Two volunteers have left an evacuated field hospital.",people:[person("a","Sam","doctor"),person("b","Nuri","water")]},
- {name:"Evacuated neighbours",story:"Three neighbours reached your entrance after their district lost power.",people:[person("a","Jo","general",80),person("b","Ren","farmer"),person("c","Alex","engineer")]}
+ {name:"The Vale family",story:"A family displaced by fighting needs shelter together.",people:[person("a","Mara","farmer",100,false,"resourceful"),person("b","Eli","engineer",60,false,"steady"),person("c","Kit","general",100,true,"young")]},
+ {name:"Civilian medical team",story:"Two volunteers have left an evacuated field hospital.",people:[person("a","Sam","doctor",100,false,"empathetic"),person("b","Nuri","water",100,false,"observant")]},
+ {name:"Evacuated neighbours",story:"Three neighbours reached your entrance after their district lost power.",people:[person("a","Jo","general",80,false,"restless"),person("b","Ren","farmer",100,false,"resourceful"),person("c","Alex","engineer",100,false,"observant")]}
  ];
  const g=groups[index%groups.length];return {name:g.name,story:g.story,people:g.people.map(p=>({...p,id:"arrival-"+index+"-"+p.id}))};
+}
+const CHAPTER_OBJECTIVES=[
+ {id:"reception",name:"Open the doors",brief:"Make the first admission decision.",done:s=>s.arrivalIndex>=1},
+ {id:"operations",name:"Find a rhythm",brief:"Complete one shelter operation.",done:s=>(s.activities?.completed||0)>=1},
+ {id:"clinic",name:"Protect the vulnerable",brief:"Build a clinic for the community.",done:s=>Object.values(s.cells).includes("clinic")},
+ {id:"community",name:"A community of eight",brief:"Reach eight residents.",done:s=>s.residents>=8}
+];
+function normaliseChapter(c){return {id:"first-blackout",claimed:Boolean(c&&c.claimed)};}
+function chapterStatus(s){return CHAPTER_OBJECTIVES.map(o=>({id:o.id,name:o.name,brief:o.brief,done:Boolean(o.done(s))}));}
+function claimChapter(s){
+ s.chapter=normaliseChapter(s.chapter);const goals=chapterStatus(s);if(s.chapter.claimed)return {ok:false,message:"Chapter already completed. The next briefing is not yet available."};if(!goals.every(g=>g.done))return {ok:false,message:"Complete the remaining chapter objectives before filing the report."};
+ s.chapter.claimed=true;s.resources.materials=Math.min(1000000,s.resources.materials+100);s.morale=Math.min(100,s.morale+10);s.lore=(s.lore||[]).concat("Chapter One complete · The first blackout is over, but Haven 17 has become a permanent community.").slice(-8);s.log="Chapter One complete. Haven 17 is ready for the next briefing.";return {ok:true,message:s.log};
 }
 function normaliseDaily(d){const out={lastDay:null,streak:0,total:0};if(!d||typeof d!=="object")return out;if(d.lastDay===null||Number.isSafeInteger(d.lastDay))out.lastDay=d.lastDay;if(Number.isSafeInteger(d.streak)&&d.streak>=0)out.streak=d.streak;if(Number.isSafeInteger(d.total)&&d.total>=0)out.total=d.total;return out;}
 function dailyClaim(s,day){
@@ -154,10 +167,10 @@ function activity(s,id){
 }
 function community(s){
  s.resources.medicine=20;s.people=[];
- const starters=[["Ada","engineer","2:0"],["Noor","water","4:0"],["Rose","farmer","1:0"],["Leon","doctor",null]];
+ const starters=[["Ada","engineer","2:0","steady"],["Noor","water","4:0","observant"],["Rose","farmer","1:0","resourceful"],["Leon","doctor",null,"empathetic"]];
  for(let i=0;i<s.residents;i++){const p=person("resident-"+i,starters[i]?.[0]||"Resident "+(i+1),starters[i]?.[1]||"general");
- const job=starters[i]?.[2];if(job&&JOBS[s.cells[job]])p.job=job;s.people.push(p);}
- s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.morale=62;s.activities=freshActivities();s.daily={lastDay:null,streak:0,total:0};s.lore=["2043 · Greywater Basin. The Long Blackout cut the region off from the surface.","Haven 17 was built under a decommissioned rail interchange by the Lantern Programme.","The first rule of the shelter is simple: every admission is a promise the systems must keep."];s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
+ const job=starters[i]?.[2];p.trait=starters[i]?.[3]||"steady";if(job&&JOBS[s.cells[job]])p.job=job;s.people.push(p);}
+ s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.morale=62;s.activities=freshActivities();s.daily={lastDay:null,streak:0,total:0};s.chapter={id:"first-blackout",claimed:false};s.lore=["2043 · Greywater Basin. The Long Blackout cut the region off from the surface.","Haven 17 was built under a decommissioned rail interchange by the Lantern Programme.","The first rule of the shelter is simple: every admission is a promise the systems must keep."];s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
  return s;
 }
 function worker(s,k){return s.people.find(p=>p.job===k&&!p.child&&p.health>=100);}
@@ -225,6 +238,6 @@ function validateCommunity(s,cells){
  }
 }
 
-const api={JOBS,ACTIVITY_DEFS,activity,dailyClaim,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
+const api={JOBS,TRAITS,ACTIVITY_DEFS,CHAPTER_OBJECTIVES,chapterStatus,claimChapter,activity,dailyClaim,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.Bunker=api;
 })(typeof globalThis!=="undefined"?globalThis:this);

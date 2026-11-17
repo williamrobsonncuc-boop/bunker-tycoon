@@ -83,3 +83,12 @@ The visual treatment is moving toward a credible municipal emergency facility: c
 The current build now has a branded Haven 17 command home, an in-world shelter status summary, settings for reduced motion and high contrast, and a daily civil-defence supply drop. Daily drops rotate through materials, food, water and medicine, track a return streak, and can only be claimed once per day. They are deliberately small and resource-aware: returning should feel useful without making the game depend on compulsive notifications.
 
 The interface also uses restrained motion for room life, panel transitions and focus feedback, with a reduced-motion switch for players who need it. The home brief, archive, operations and settings are all data-backed panels rather than decorative screens.
+
+
+## Chapter and identity milestone
+
+Haven 17 now has a first playable chapter brief, **The First Blackout**. Four objectives turn the opening into a clear arc: make the first reception decision, complete an operation, build medical capacity and reach a community of eight. The chapter can be filed for a materials and morale reward.
+
+Residents now carry readable personality traits such as steady, observant, resourceful, empathetic, restless and young. Traits are currently descriptive and saved as part of the community record; future balancing can give them carefully tested mechanical effects.
+
+See [the playtest and business plan](docs/PLAYTEST_AND_BUSINESS_PLAN.md) for the proposed validation sequence, fair monetisation model, brand direction and release gates.
