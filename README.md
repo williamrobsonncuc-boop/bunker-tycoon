@@ -76,3 +76,10 @@ The shelter now includes a repeatable **Operations & Archive** panel:
 Operations have cooldowns, explicit costs, readable standby states and an activity history. The save format migrates older v1/v2 saves to version 3, preserving the existing shelter. The interface now reports a Civil Defence status (secure/stable/strained) and includes an in-world archive for discovered lore.
 
 The visual treatment is moving toward a credible municipal emergency facility: concrete, steel, paper, olive and warning amber, with the high-contrast simple room silhouettes retained for mobile readability. The current art remains an editable prototype kit; final production art, animation and device review are still separate milestones.
+
+
+## Product pass: home, settings and daily supply
+
+The current build now has a branded Haven 17 command home, an in-world shelter status summary, settings for reduced motion and high contrast, and a daily civil-defence supply drop. Daily drops rotate through materials, food, water and medicine, track a return streak, and can only be claimed once per day. They are deliberately small and resource-aware: returning should feel useful without making the game depend on compulsive notifications.
+
+The interface also uses restrained motion for room life, panel transitions and focus feedback, with a reduced-motion switch for players who need it. The home brief, archive, operations and settings are all data-backed panels rather than decorative screens.

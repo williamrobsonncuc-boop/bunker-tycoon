@@ -22,12 +22,14 @@ function save(){try{localStorage.setItem(SAVE,JSON.stringify(state));$("save-sta
 function estimateReport(){const copy=JSON.parse(JSON.stringify(state));report=E.step(copy);}
 function showPanel(name,focus=true){
  panel=name;returnFocus=document.activeElement;$("controls").hidden=false;document.querySelector(".layout").classList.add("panel-visible");
- const labels={build:"BUILD & MANAGE",people:"YOUR COMMUNITY",entrance:"SURFACE ACCESS",supplies:"SHELTER SUPPLIES"};
+ const labels={home:"HAVEN 17 COMMAND",build:"BUILD & MANAGE",people:"YOUR COMMUNITY",entrance:"SURFACE ACCESS",activities:"OPERATIONS & ARCHIVE",supplies:"SHELTER SUPPLIES",settings:"SETTINGS"};
  $("panel-name").textContent=labels[name];
  document.querySelectorAll("[data-panel]").forEach(el=>el.hidden=el.dataset.panel!==name);
  document.querySelectorAll("[data-open]").forEach(b=>{b.setAttribute("aria-expanded",String(b.dataset.open===name));b.setAttribute("aria-controls","controls");});
  if(name==="people"||name==="entrance")renderCommunity();
  if(name==="activities")renderActivities();
+ if(name==="home")renderHome();
+ if(name==="settings")renderSettings();
  if(focus)document.querySelector('[data-panel="'+name+'"] h2').focus();
 }
 function closePanel(){
@@ -135,6 +137,7 @@ function renderCommunity(){
 }
 function renderActivities(){
  const box=$("activities");if(!box)return;box.replaceChildren();
+ const daily=state.daily||{lastDay:null,streak:0,total:0},claimed=daily.lastDay===todayDay();const drop=node("article");drop.className="daily-drop"+(claimed?" claimed":"");drop.append(node("h3","Daily civil-defence supply drop"),node("p",claimed?"Today's crate is logged. Return tomorrow for the next handoff.":"A small, dependable supply handoff from the surviving municipal network."));const ds=node("p","Streak "+daily.streak+" · Drops received "+daily.total);ds.className="activity-meta";const db=node("button",claimed?"CLAIMED TODAY":"Claim today's drop");db.className="primary";db.disabled=claimed;db.onclick=()=>act(()=>E.dailyClaim(state,todayDay()));drop.append(ds,db);box.append(drop);
  const intro=node("p","Operations keep the shelter feeling like a living installation: decode signals, recover stock, rehearse emergency procedure and watch the perimeter.");
  intro.className="hint";box.append(intro);
  const defs=E.ACTIVITY_DEFS||{},ops=state.activities||{last:{},completed:0,history:[]};
@@ -150,12 +153,24 @@ function renderActivities(){
  (state.lore||[]).slice().reverse().forEach(line=>archive.append(node("p",line)));
  box.append(archive);
 }
-function render(){updateResources();renderGrid();renderPanel();renderCommunity();if(panel==="activities")renderActivities();}
+function renderHome(){
+ const el=$("home-summary");if(!el)return;const cap=E.capacity(state);el.textContent="Haven 17 · "+state.residents+" people · "+cap.housing+" beds · "+Math.round(state.morale??62)+"% civil-defence status";
+ const log=$("home-log");if(log)log.textContent=state.log||"Shelter systems nominal.";
+}
+function renderSettings(){
+ const reduce=localStorage.getItem("bunker-tycoon:reduce-motion")==="1",contrast=localStorage.getItem("bunker-tycoon:high-contrast")==="1";
+ document.body.classList.toggle("reduced-motion",reduce);document.body.classList.toggle("high-contrast",contrast);
+ const r=$("toggle-motion"),c=$("toggle-contrast");if(r)r.setAttribute("aria-pressed",String(reduce));if(c)c.setAttribute("aria-pressed",String(contrast));
+}
+function todayDay(){return Math.floor(Date.now()/86400000);}
+function render(){updateResources();renderGrid();renderPanel();renderCommunity();if(panel==="activities")renderActivities();if(panel==="home")renderHome();if(panel==="settings")renderSettings();}
 function act(fn){const r=fn();message(r.message);if(r.ok!==false)save();estimateReport();render();}
 function centerShaft(){const tile=document.querySelector('[data-cell="3:0"]');if(tile)$("map-scroll").scrollLeft=Math.max(0,tile.offsetLeft-$("grid").offsetLeft+tile.offsetWidth/2-$("map-scroll").clientWidth/2);}
 $("center").onclick=centerShaft;
 $("zoom").onclick=()=>{const on=document.body.classList.toggle("overview");$("zoom").textContent=on?"Room detail":"Overview";$("zoom").setAttribute("aria-pressed",String(on));requestAnimationFrame(centerShaft);};
-$("close-panel").onclick=closePanel;document.addEventListener("keydown",e=>{if(e.key==="Escape"&&panel)closePanel();});
+$("close-panel").onclick=closePanel;$("toggle-motion")?.addEventListener("click",()=>{const on=localStorage.getItem("bunker-tycoon:reduce-motion")==="1";localStorage.setItem("bunker-tycoon:reduce-motion",on?"0":"1");renderSettings();});
+$("toggle-contrast")?.addEventListener("click",()=>{const on=localStorage.getItem("bunker-tycoon:high-contrast")==="1";localStorage.setItem("bunker-tycoon:high-contrast",on?"0":"1");renderSettings();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&panel)closePanel();});
 document.querySelectorAll("[data-open]").forEach(b=>{b.setAttribute("aria-expanded","false");b.setAttribute("aria-controls","controls");b.onclick=()=>{if(panel===b.dataset.open)closePanel();else showPanel(b.dataset.open);};});
 $("dig").onclick=()=>selected&&act(()=>E.dig(state,selected.x,selected.y));
 document.querySelectorAll("[data-choice]").forEach(b=>b.onclick=()=>act(()=>E.decide(state,b.dataset.choice)));
@@ -178,6 +193,7 @@ setInterval(()=>{
  document.querySelectorAll("[data-status]").forEach(el=>{const k=el.dataset.status;el.textContent=report.status[k]||(E.JOBS[state.cells[k]]?"Needs worker":"Ready");});
  if(selected){const {x,y}=selected;$("dig").disabled=!E.canDig(state,x,y)||state.resources.materials<E.digCost(y);document.querySelectorAll("[data-build]").forEach(b=>b.disabled=state.resources.materials<E.ROOMS[b.dataset.build].cost);}
  if(panel==="activities")renderActivities();
+ if(panel==="home")renderHome();
  if(report.shortage)message("Supplies are low. Inspect farming, water and power. Residents are safe.");
  if(state.seconds%5===0)save();
 },1000);

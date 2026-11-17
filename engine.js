@@ -1,6 +1,6 @@
 "use strict";
 (function(root) {
-const WIDTH=7, DEPTH=8, VERSION=3;
+const WIDTH=7, DEPTH=8, VERSION=4;
 const ROOMS={
   generator:{name:"Generator",icon:"⚡",cost:90,color:"#d3a544",description:"Produces 6 power/s.",power:6},
   pump:{name:"Water treatment",icon:"💧",cost:80,color:"#59aac4",description:"Uses 1 power/s to make 2 water/s."},
@@ -87,7 +87,7 @@ function step(s){
 }
 function restore(raw){
  const s=JSON.parse(raw);
- if(!s||![1,2,VERSION].includes(s.version)||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
+ if(!s||![1,2,3,VERSION].includes(s.version)||!s.cells||!s.resources||!Number.isInteger(s.residents)||s.residents<1||s.residents>224||!Number.isInteger(s.seconds)||s.seconds<0)throw Error("Unsupported save");
  for(const n of ["materials","food","water","power"])if(!Number.isFinite(s.resources[n])||s.resources[n]<0||s.resources[n]>1000000)throw Error("Invalid resources");
  const cells={};
  for(const [k,t] of Object.entries(s.cells)){
@@ -105,7 +105,7 @@ function restore(raw){
  let clean={version:VERSION,cells,resources:{...s.resources},residents:s.residents,seconds:s.seconds};
  if(s.version===1)clean=community(clean);else {validateCommunity(s,cells);Object.assign(clean,{people:s.people,arrivalIndex:s.arrivalIndex,arrival:s.arrival,nextArrival:s.nextArrival});}
  if(!Number.isFinite(s.morale))clean.morale=62;else clean.morale=Math.max(0,Math.min(100,s.morale));
- clean.activities=normaliseActivities(s.activities);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];clean.log=typeof s.log==="string"?s.log.slice(0,200):"";
+ clean.activities=normaliseActivities(s.activities);clean.daily=normaliseDaily(s.daily);clean.lore=Array.isArray(s.lore)?s.lore.filter(v=>typeof v==="string").slice(-8):[];clean.log=typeof s.log==="string"?s.log.slice(0,200):"";
  const cap=capacity(clean);if(clean.residents>cap.housing)throw Error("Insufficient housing");
  for(const n of ["food","water","power"])clean.resources[n]=Math.min(clean.resources[n],cap[n]);
  return clean;
@@ -121,6 +121,16 @@ function makeArrival(index){
  {name:"Evacuated neighbours",story:"Three neighbours reached your entrance after their district lost power.",people:[person("a","Jo","general",80),person("b","Ren","farmer"),person("c","Alex","engineer")]}
  ];
  const g=groups[index%groups.length];return {name:g.name,story:g.story,people:g.people.map(p=>({...p,id:"arrival-"+index+"-"+p.id}))};
+}
+function normaliseDaily(d){const out={lastDay:null,streak:0,total:0};if(!d||typeof d!=="object")return out;if(d.lastDay===null||Number.isSafeInteger(d.lastDay))out.lastDay=d.lastDay;if(Number.isSafeInteger(d.streak)&&d.streak>=0)out.streak=d.streak;if(Number.isSafeInteger(d.total)&&d.total>=0)out.total=d.total;return out;}
+function dailyClaim(s,day){
+ if(!Number.isSafeInteger(day)||day<0)return {ok:false,message:"Daily supply date is invalid."};
+ s.daily=normaliseDaily(s.daily);if(s.daily.lastDay===day)return {ok:false,message:"Daily supply drop already claimed. Check back tomorrow."};
+ const gap=s.daily.lastDay===null?1:day-s.daily.lastDay;s.daily.streak=gap===1?s.daily.streak+1:1;s.daily.lastDay=day;s.daily.total++;
+ const rewards=[["materials",45],["food",35],["water",35],["medicine",4]],pick=rewards[(s.daily.total-1)%rewards.length],cap=capacity(s);
+ const gained=Math.min(pick[1],Math.max(0,(cap[pick[0]]??1000000)-s.resources[pick[0]]));s.resources[pick[0]]+=gained;s.morale=Math.min(100,(s.morale??62)+2);
+ s.log="Daily civil-defence supply drop received: "+gained+" "+pick[0]+".";
+ return {ok:true,message:s.log,reward:{resource:pick[0],amount:gained},streak:s.daily.streak};
 }
 const ACTIVITY_DEFS={
  radio:{name:"Long-range radio",brief:"Decode a surviving civil-defence broadcast.",cost:{power:3},cooldown:90,reward:"intel",description:"A quiet signal can reveal who is still out there.",lore:"The emergency network still repeats a three-note handshake from the old Civil Defence Authority."},
@@ -147,7 +157,7 @@ function community(s){
  const starters=[["Ada","engineer","2:0"],["Noor","water","4:0"],["Rose","farmer","1:0"],["Leon","doctor",null]];
  for(let i=0;i<s.residents;i++){const p=person("resident-"+i,starters[i]?.[0]||"Resident "+(i+1),starters[i]?.[1]||"general");
  const job=starters[i]?.[2];if(job&&JOBS[s.cells[job]])p.job=job;s.people.push(p);}
- s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.morale=62;s.activities=freshActivities();s.lore=["2043 · Greywater Basin. The Long Blackout cut the region off from the surface.","Haven 17 was built under a decommissioned rail interchange by the Lantern Programme.","The first rule of the shelter is simple: every admission is a promise the systems must keep."];s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
+ s.arrivalIndex=0;s.arrival=makeArrival(0);s.nextArrival=s.seconds;s.morale=62;s.activities=freshActivities();s.daily={lastDay:null,streak:0,total:0};s.lore=["2043 · Greywater Basin. The Long Blackout cut the region off from the surface.","Haven 17 was built under a decommissioned rail interchange by the Lantern Programme.","The first rule of the shelter is simple: every admission is a promise the systems must keep."];s.log="World War 3 continues above. This civilian shelter is independent of the fighting.";
  return s;
 }
 function worker(s,k){return s.people.find(p=>p.job===k&&!p.child&&p.health>=100);}
@@ -215,6 +225,6 @@ function validateCommunity(s,cells){
  }
 }
 
-const api={JOBS,ACTIVITY_DEFS,activity,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
+const api={JOBS,ACTIVITY_DEFS,activity,dailyClaim,assign,forecast,decide,medicine,WIDTH,DEPTH,ROOMS,key,initial,capacity,digCost,canDig,dig,build,invite,step,restore};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.Bunker=api;
 })(typeof globalThis!=="undefined"?globalThis:this);
