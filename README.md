@@ -104,3 +104,8 @@ Successful and failed actions also receive restrained audio feedback through the
 ## Landmark system
 
 The buried Millbank railway platform is now a playable long-term project. Players must complete operations, reserve resources and survey the platform, then later restore it with a larger community. Restoration increases food, water and power capacity and records a permanent change in the archive. This is the game's first signature discovery beyond ordinary room construction.
+
+
+## Responsive layout pass
+
+The layout now explicitly targets small phones, large phones, tablet portrait, tablet landscape and desktop. Safe-area padding, no-root-horizontal-overflow rules, orientation-specific map heights, tablet panel sizing and a scrollable navigation dock are included. GitHub Actions now checks 834×1112 and 1112×834 tablet viewports in addition to the existing phone and desktop runs.

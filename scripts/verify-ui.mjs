@@ -63,6 +63,15 @@ try{
  await page.screenshot({path:resolve(screenshots,"desktop-shelter.png"),fullPage:true});
  assert.deepEqual(errors,[]);
  console.log("PASS desktop: responsive control panel and no JavaScript errors");
+ for(const [name,viewport] of [["tablet-portrait",{width:834,height:1112}],["tablet-landscape",{width:1112,height:834}]]){
+  const tablet=await browser.newContext({viewport});const tab=await tablet.newPage();const tabletErrors=[];tab.on("pageerror",e=>tabletErrors.push(e.message));await tab.goto(url,{waitUntil:"networkidle"});await tab.locator("#pause").click();
+  assert(await tab.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+" page overflows horizontally");
+  await tab.locator('[data-open="home"]').click();assert(await tab.locator("#home-summary").isVisible(),name+" home panel is not visible");
+  await tab.locator('[data-open="settings"]').click();assert(await tab.locator("#toggle-motion").isVisible(),name+" settings panel is not visible");
+  await tab.screenshot({path:resolve(screenshots,name+".png"),fullPage:true});assert.deepEqual(tabletErrors,[],name+" browser JavaScript errors");await tablet.close();
+ }
+ console.log("PASS tablet: portrait and landscape layouts, home and settings");
+
  console.log("Browser checks complete. Physical-device and human visual review remain required.");
 }catch(error){
  if(page)await page.screenshot({path:resolve(screenshots,"failure.png"),fullPage:true}).catch(()=>{});
